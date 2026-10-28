@@ -50,3 +50,10 @@ export class NotFoundError extends Error {
     this.id = id;
   }
 }
+export class ConflictError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = 'ConflictError';
+    this.details = details;
+  }
+}
