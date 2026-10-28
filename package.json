@@ -1,0 +1,15 @@
+{
+  "name": "gardengrid",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline-first garden planning with plots, crops, rotation checks and a planting calendar.",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "start": "node src/cli/index.js serve",
+    "migrate": "node src/cli/index.js migrate",
+    "calendar": "node src/cli/index.js calendar",
+    "test": "node --test",
+    "verify": "node scripts/verify.mjs"
+  }
+}
