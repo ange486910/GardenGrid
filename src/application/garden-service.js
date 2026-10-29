@@ -1,4 +1,4 @@
-import { calendarEvents, createCrop, createFrostProfile, createPlanting, createPlot, rotationConflict, sowingWindow } from '../domain/garden.js';
+import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, rotationConflict, sowingWindow, yieldSummary } from '../domain/garden.js';
 import { ConflictError, NotFoundError, requireDate } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
@@ -26,6 +26,17 @@ export function createGardenService(repository, dependencies = {}) {
     listCrops() { return repository.listCrops(); },
     createCrop(input) { return repository.createCrop(createCrop(input, dependencies)); },
     listPlantings() { return repository.listPlantings(); },
+    listHarvests() { return repository.listHarvests(); },
+
+    recordHarvest(input) {
+      const planting = repository.listPlantings().find((entry) => entry.id === input?.plantingId);
+      if (!planting) throw new NotFoundError('planting', input?.plantingId);
+      return repository.createHarvest(createHarvest(input, dependencies));
+    },
+
+    yieldReport() {
+      return yieldSummary({ harvests: repository.listHarvests(), plantings: repository.listPlantings(), crops: repository.listCrops() });
+    },
 
     window(cropId, profileId) {
       const crop = requireCrop(cropId);
