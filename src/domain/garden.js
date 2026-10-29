@@ -84,3 +84,29 @@ export function calendarEvents({ plantings, crops, plots, from, to }) {
   }
   return events.sort((left, right) => left.date.localeCompare(right.date) || left.type.localeCompare(right.type));
 }
+
+export function validateFrostProfileInput(input = {}) {
+  const payload = requireObject(input, 'frostProfile');
+  const lastFrostDate = requireDate(payload.lastFrostDate, 'lastFrostDate');
+  const firstFrostDate = requireDate(payload.firstFrostDate, 'firstFrostDate');
+  if (firstFrostDate < lastFrostDate) throw new ValidationError('firstFrostDate must not precede lastFrostDate', { field: 'firstFrostDate' });
+  return {
+    name: requireString(payload.name, 'name', { maxLength: 80 }),
+    zone: requireString(payload.zone, 'zone', { maxLength: 20 }),
+    lastFrostDate,
+    firstFrostDate
+  };
+}
+
+export function createFrostProfile(input, dependencies = {}) {
+  const clock = dependencies.clock ?? { now: () => new Date() };
+  const createId = dependencies.createId ?? ((prefix) => `${prefix}_${Date.now()}`);
+  return { id: createId('frost'), ...validateFrostProfileInput(input), createdAt: clock.now().toISOString() };
+}
+
+export function sowingWindow(crop, profile) {
+  if (crop.frostHardy) {
+    return { cropId: crop.id, profileId: profile.id, earliest: addDays(profile.lastFrostDate, -28), latest: addDays(profile.lastFrostDate, -14), relativeToFrost: 'before' };
+  }
+  return { cropId: crop.id, profileId: profile.id, earliest: addDays(profile.lastFrostDate, 7), latest: addDays(profile.lastFrostDate, 21), relativeToFrost: 'after' };
+}
