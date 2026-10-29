@@ -26,6 +26,10 @@ export function createApiServer(service) {
       if (request.method === 'GET' && url.pathname === '/api/v1/health') return sendJson(response, 200, { data: { status: 'ok' } });
       if (url.pathname === '/api/v1/plots' && request.method === 'GET') return sendJson(response, 200, { data: service.listPlots() });
       if (url.pathname === '/api/v1/plots' && request.method === 'POST') return sendJson(response, 201, { data: service.createPlot(await readJson(request)) });
+      if (url.pathname === '/api/v1/frost-profiles' && request.method === 'GET') return sendJson(response, 200, { data: service.listFrostProfiles() });
+      if (url.pathname === '/api/v1/frost-profiles' && request.method === 'POST') return sendJson(response, 201, { data: service.createFrostProfile(await readJson(request)) });
+      const windowMatch = url.pathname.match(/^\/api\/v1\/frost-profiles\/([^/]+)\/windows\/([^/]+)$/);
+      if (windowMatch && request.method === 'GET') return sendJson(response, 200, { data: service.window(decodeURIComponent(windowMatch[2]), decodeURIComponent(windowMatch[1])) });
       if (url.pathname === '/api/v1/crops' && request.method === 'GET') return sendJson(response, 200, { data: service.listCrops() });
       if (url.pathname === '/api/v1/crops' && request.method === 'POST') return sendJson(response, 201, { data: service.createCrop(await readJson(request)) });
       if (url.pathname === '/api/v1/plantings' && request.method === 'GET') return sendJson(response, 200, { data: service.listPlantings() });
