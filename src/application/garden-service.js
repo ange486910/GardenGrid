@@ -1,4 +1,4 @@
-import { calendarEvents, createCrop, createPlanting, createPlot, rotationConflict } from '../domain/garden.js';
+import { calendarEvents, createCrop, createFrostProfile, createPlanting, createPlot, rotationConflict, sowingWindow } from '../domain/garden.js';
 import { ConflictError, NotFoundError, requireDate } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
@@ -6,6 +6,11 @@ export function createGardenService(repository, dependencies = {}) {
     const plot = repository.findPlot(id);
     if (!plot) throw new NotFoundError('plot', id);
     return plot;
+  }
+  function requireFrostProfile(id) {
+    const profile = repository.findFrostProfile(id);
+    if (!profile) throw new NotFoundError('frost profile', id);
+    return profile;
   }
   function requireCrop(id) {
     const crop = repository.findCrop(id);
@@ -16,9 +21,17 @@ export function createGardenService(repository, dependencies = {}) {
   return {
     listPlots() { return repository.listPlots(); },
     createPlot(input) { return repository.createPlot(createPlot(input, dependencies)); },
+    listFrostProfiles() { return repository.listFrostProfiles(); },
+    createFrostProfile(input) { return repository.createFrostProfile(createFrostProfile(input, dependencies)); },
     listCrops() { return repository.listCrops(); },
     createCrop(input) { return repository.createCrop(createCrop(input, dependencies)); },
     listPlantings() { return repository.listPlantings(); },
+
+    window(cropId, profileId) {
+      const crop = requireCrop(cropId);
+      const profile = requireFrostProfile(profileId);
+      return sowingWindow(crop, profile);
+    },
 
     plant(input) {
       const plot = requirePlot(input?.plotId);
