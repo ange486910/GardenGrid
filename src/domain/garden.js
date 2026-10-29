@@ -110,3 +110,54 @@ export function sowingWindow(crop, profile) {
   }
   return { cropId: crop.id, profileId: profile.id, earliest: addDays(profile.lastFrostDate, 7), latest: addDays(profile.lastFrostDate, 21), relativeToFrost: 'after' };
 }
+
+export const HARVEST_UNITS = Object.freeze(['kg', 'g', 'count', 'bunch']);
+
+export function requireNumber(value, field, options = {}) {
+  const { min = 0, max = 1_000_000 } = options;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= min || value > max) throw new ValidationError(`${field} must be a number greater than ${min}`, { field });
+  return value;
+}
+
+export function validateHarvestInput(input = {}) {
+  const payload = requireObject(input, 'harvest');
+  return {
+    plantingId: requireString(payload.plantingId, 'plantingId', { maxLength: 128 }),
+    harvestedOn: requireDate(payload.harvestedOn, 'harvestedOn'),
+    quantity: requireNumber(payload.quantity, 'quantity', { min: 0, max: 1000000 }),
+    unit: requireEnum(payload.unit, 'unit', HARVEST_UNITS)
+  };
+}
+
+export function createHarvest(input, dependencies = {}) {
+  const clock = dependencies.clock ?? { now: () => new Date() };
+  const createId = dependencies.createId ?? ((prefix) => `${prefix}_${Date.now()}`);
+  return { id: createId('harvest'), ...validateHarvestInput(input), createdAt: clock.now().toISOString() };
+}
+
+export function yieldSummary({ harvests, plantings, crops }) {
+  const plantingById = new Map(plantings.map((planting) => [planting.id, planting]));
+  const cropById = new Map(crops.map((crop) => [crop.id, crop]));
+  const groups = new Map();
+  for (const harvest of harvests) {
+    const planting = plantingById.get(harvest.plantingId);
+    const crop = planting ? cropById.get(planting.cropId) : null;
+    if (!crop) continue;
+    const key = `${crop.id}:${harvest.unit}`;
+    if (!groups.has(key)) groups.set(key, { cropId: crop.id, cropName: crop.name, unit: harvest.unit, totalQuantity: 0, harvestCount: 0, plantingIds: new Set() });
+    const group = groups.get(key);
+    group.totalQuantity += harvest.quantity;
+    group.harvestCount += 1;
+    group.plantingIds.add(planting.id);
+  }
+  const byCrop = [...groups.values()].map((group) => ({
+    cropId: group.cropId,
+    cropName: group.cropName,
+    unit: group.unit,
+    totalQuantity: Math.round(group.totalQuantity * 100) / 100,
+    harvestCount: group.harvestCount,
+    plantings: group.plantingIds.size,
+    averagePerPlanting: Math.round((group.totalQuantity / group.plantingIds.size) * 100) / 100
+  }));
+  return { byCrop, totalHarvests: harvests.length };
+}
