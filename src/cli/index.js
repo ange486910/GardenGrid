@@ -11,6 +11,12 @@ function parse(argv) {
     else if (token === '--from') options.from = argv[++index];
     else if (token === '--to') options.to = argv[++index];
     else if (token === '--port') options.port = Number(argv[++index]);
+    else if (token === '--name') options.name = argv[++index];
+    else if (token === '--zone') options.zone = argv[++index];
+    else if (token === '--last-frost') options.lastFrost = argv[++index];
+    else if (token === '--first-frost') options.firstFrost = argv[++index];
+    else if (token === '--crop') options.crop = argv[++index];
+    else if (token === '--profile') options.profile = argv[++index];
   }
   return { command, options };
 }
@@ -19,6 +25,8 @@ const help = `GardenGrid CLI
 
   node src/cli/index.js migrate [--database <path>]
   node src/cli/index.js calendar --from YYYY-MM-DD --to YYYY-MM-DD [--database <path>]
+  node src/cli/index.js frost --name <name> --zone <zone> --last-frost YYYY-MM-DD --first-frost YYYY-MM-DD
+  node src/cli/index.js window --crop <id> --profile <id> [--database <path>]
   node src/cli/index.js serve [--port <port>] [--database <path>]
 `;
 
@@ -34,6 +42,17 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', events: app.service.calendar(options.from, options.to) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'frost') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const profile = app.service.createFrostProfile({ name: options.name, zone: options.zone, lastFrostDate: options.lastFrost, firstFrostDate: options.firstFrost });
+    console.log(JSON.stringify({ status: 'ok', profile }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'window') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', window: app.service.window(options.crop, options.profile) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'serve') {
   const app = createApplication({ databasePath: options.databasePath });

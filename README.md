@@ -15,6 +15,7 @@ calendar. It runs on Node.js 24 with no third-party runtime dependencies and use
 ```powershell
 node src/cli/index.js migrate
 node src/cli/index.js calendar --from 2026-10-01 --to 2026-12-31
+node src/cli/index.js frost --name "Zone 5" --zone 5a --last-frost 2026-05-15 --first-frost 2026-10-01
 node src/cli/index.js serve
 ```
 
@@ -23,6 +24,8 @@ node src/cli/index.js serve
 - `GET|POST /api/v1/plots`
 - `GET|POST /api/v1/crops`
 - `GET|POST /api/v1/plantings`
+- `GET|POST /api/v1/frost-profiles`
+- `GET /api/v1/frost-profiles/:id/windows/:cropId`
 - `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
 ## License
