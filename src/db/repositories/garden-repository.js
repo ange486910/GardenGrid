@@ -6,6 +6,10 @@ function mapCrop(row) {
   if (!row) return null;
   return { id: row.id, name: row.name, family: row.family, daysToHarvest: Number(row.days_to_harvest), frostHardy: Number(row.frost_hardy) === 1, createdAt: row.created_at };
 }
+function mapHarvest(row) {
+  if (!row) return null;
+  return { id: row.id, plantingId: row.planting_id, harvestedOn: row.harvested_on, quantity: Number(row.quantity), unit: row.unit, createdAt: row.created_at };
+}
 function mapFrostProfile(row) {
   if (!row) return null;
   return { id: row.id, name: row.name, zone: row.zone, lastFrostDate: row.last_frost_date, firstFrostDate: row.first_frost_date, createdAt: row.created_at };
@@ -28,6 +32,9 @@ export class GardenRepository {
       listFrostProfiles: db.prepare('SELECT * FROM frost_profiles ORDER BY name ASC, id ASC'),
       findFrostProfile: db.prepare('SELECT * FROM frost_profiles WHERE id = ?'),
       insertFrostProfile: db.prepare('INSERT INTO frost_profiles (id, name, zone, last_frost_date, first_frost_date, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+      listHarvests: db.prepare('SELECT * FROM harvests ORDER BY harvested_on ASC, id ASC'),
+      listHarvestsByPlanting: db.prepare('SELECT * FROM harvests WHERE planting_id = ? ORDER BY harvested_on ASC, id ASC'),
+      insertHarvest: db.prepare('INSERT INTO harvests (id, planting_id, harvested_on, quantity, unit, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       listPlantings: db.prepare('SELECT * FROM plantings ORDER BY planted_on ASC, id ASC'),
       insertPlanting: db.prepare('INSERT INTO plantings (id, plot_id, crop_id, planted_on, expected_harvest_on, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
     };
@@ -42,8 +49,11 @@ export class GardenRepository {
   listFrostProfiles() { return this.statements.listFrostProfiles.all().map(mapFrostProfile); }
   findFrostProfile(id) { return mapFrostProfile(this.statements.findFrostProfile.get(id)); }
   createFrostProfile(profile) { this.statements.insertFrostProfile.run(profile.id, profile.name, profile.zone, profile.lastFrostDate, profile.firstFrostDate, profile.createdAt); return profile; }
+  listHarvests() { return this.statements.listHarvests.all().map(mapHarvest); }
+  listHarvestsByPlanting(plantingId) { return this.statements.listHarvestsByPlanting.all(plantingId).map(mapHarvest); }
+  createHarvest(harvest) { this.statements.insertHarvest.run(harvest.id, harvest.plantingId, harvest.harvestedOn, harvest.quantity, harvest.unit, harvest.createdAt); return harvest; }
   listPlantings() { return this.statements.listPlantings.all().map(mapPlanting); }
   createPlanting(planting) { this.statements.insertPlanting.run(planting.id, planting.plotId, planting.cropId, planting.plantedOn, planting.expectedHarvestOn, planting.status, planting.createdAt); return planting; }
 }
 
-export { mapPlot, mapCrop, mapPlanting, mapFrostProfile };
+export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest };
