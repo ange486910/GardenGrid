@@ -29,9 +29,10 @@ export function createGardenService(repository, dependencies = {}) {
     listHarvests() { return repository.listHarvests(); },
 
     recordHarvest(input) {
-      const planting = repository.listPlantings().find((entry) => entry.id === input?.plantingId);
-      if (!planting) throw new NotFoundError('planting', input?.plantingId);
-      return repository.createHarvest(createHarvest(input, dependencies));
+      const harvest = createHarvest(input, dependencies);
+      const planting = repository.listPlantings().find((entry) => entry.id === harvest.plantingId);
+      if (!planting) throw new NotFoundError('planting', harvest.plantingId);
+      return repository.createHarvest(harvest);
     },
 
     yieldReport() {

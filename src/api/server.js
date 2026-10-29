@@ -34,6 +34,9 @@ export function createApiServer(service) {
       if (url.pathname === '/api/v1/crops' && request.method === 'POST') return sendJson(response, 201, { data: service.createCrop(await readJson(request)) });
       if (url.pathname === '/api/v1/plantings' && request.method === 'GET') return sendJson(response, 200, { data: service.listPlantings() });
       if (url.pathname === '/api/v1/plantings' && request.method === 'POST') return sendJson(response, 201, { data: service.plant(await readJson(request)) });
+      if (url.pathname === '/api/v1/harvests' && request.method === 'GET') return sendJson(response, 200, { data: service.listHarvests() });
+      if (url.pathname === '/api/v1/harvests' && request.method === 'POST') return sendJson(response, 201, { data: service.recordHarvest(await readJson(request)) });
+      if (url.pathname === '/api/v1/yield' && request.method === 'GET') return sendJson(response, 200, { data: service.yieldReport() });
       if (url.pathname === '/api/v1/calendar' && request.method === 'GET') return sendJson(response, 200, { data: service.calendar(url.searchParams.get('from'), url.searchParams.get('to')) });
       throw new NotFoundError('route', url.pathname);
     } catch (error) {
