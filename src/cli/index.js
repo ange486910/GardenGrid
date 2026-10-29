@@ -17,6 +17,10 @@ function parse(argv) {
     else if (token === '--first-frost') options.firstFrost = argv[++index];
     else if (token === '--crop') options.crop = argv[++index];
     else if (token === '--profile') options.profile = argv[++index];
+    else if (token === '--planting') options.planting = argv[++index];
+    else if (token === '--date') options.date = argv[++index];
+    else if (token === '--quantity') options.quantity = Number(argv[++index]);
+    else if (token === '--unit') options.unit = argv[++index];
   }
   return { command, options };
 }
@@ -27,6 +31,8 @@ const help = `GardenGrid CLI
   node src/cli/index.js calendar --from YYYY-MM-DD --to YYYY-MM-DD [--database <path>]
   node src/cli/index.js frost --name <name> --zone <zone> --last-frost YYYY-MM-DD --first-frost YYYY-MM-DD
   node src/cli/index.js window --crop <id> --profile <id> [--database <path>]
+  node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
+  node src/cli/index.js yield [--database <path>]
   node src/cli/index.js serve [--port <port>] [--database <path>]
 `;
 
@@ -53,6 +59,16 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', window: app.service.window(options.crop, options.profile) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'harvest') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', harvest: app.service.recordHarvest({ plantingId: options.planting, harvestedOn: options.date, quantity: options.quantity, unit: options.unit }) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'yield') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', yield: app.service.yieldReport() }, null, 2));
   } finally { app.close(); }
 } else if (command === 'serve') {
   const app = createApplication({ databasePath: options.databasePath });
