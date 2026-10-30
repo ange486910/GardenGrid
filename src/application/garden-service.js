@@ -1,4 +1,5 @@
 import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, rotationConflict, sowingWindow, yieldSummary } from '../domain/garden.js';
+import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { ConflictError, NotFoundError, requireDate } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
@@ -33,6 +34,10 @@ export function createGardenService(repository, dependencies = {}) {
       const planting = repository.listPlantings().find((entry) => entry.id === harvest.plantingId);
       if (!planting) throw new NotFoundError('planting', harvest.plantingId);
       return repository.createHarvest(harvest);
+    },
+
+    companionReport() {
+      return { findings: findCompanionIssues({ plantings: repository.listPlantings(), crops: repository.listCrops(), plots: repository.listPlots() }) };
     },
 
     yieldReport() {
