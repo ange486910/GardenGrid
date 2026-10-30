@@ -1,8 +1,10 @@
-import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, rotationConflict, sowingWindow, yieldSummary } from '../domain/garden.js';
+import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, sowingWindow, yieldSummary } from '../domain/garden.js';
 import { findCompanionIssues } from '../domain/companion-matcher.js';
+import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { ConflictError, NotFoundError, requireDate } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
+  const run = dependencies.transaction ?? ((work) => work());
   function requirePlot(id) {
     const plot = repository.findPlot(id);
     if (!plot) throw new NotFoundError('plot', id);
@@ -28,6 +30,7 @@ export function createGardenService(repository, dependencies = {}) {
     createCrop(input) { return repository.createCrop(createCrop(input, dependencies)); },
     listPlantings() { return repository.listPlantings(); },
     listHarvests() { return repository.listHarvests(); },
+    listRotationEvents() { return repository.listRotationEvents(); },
 
     recordHarvest(input) {
       const harvest = createHarvest(input, dependencies);
@@ -54,15 +57,45 @@ export function createGardenService(repository, dependencies = {}) {
       const plot = requirePlot(input?.plotId);
       const crop = requireCrop(input?.cropId);
       const plantedOn = requireDate(input?.plantedOn, 'plantedOn');
-      const conflict = rotationConflict({
+      const conflict = hasRecentFamilyConflict({
         crop,
         plotId: plot.id,
-        plantings: repository.listPlantings(),
-        crops: repository.listCrops(),
+        events: repository.listRotationEvents(),
         plantedOn
       });
       if (conflict) throw new ConflictError(`rotation conflict: ${crop.family} was planted in ${plot.name} within three years`, { plotId: plot.id, cropId: crop.id, family: crop.family });
-      return repository.createPlanting(createPlanting({ ...input, plotId: plot.id }, crop, dependencies));
+      return run(() => {
+        const planting = repository.createPlanting(createPlanting({ ...input, plotId: plot.id }, crop, dependencies));
+        const event = createRotationEvent({ plotId: plot.id, cropId: crop.id, plantedOn: planting.plantedOn }, crop, dependencies);
+        repository.createRotationEvent(event);
+        return planting;
+      });
+    },
+
+    recordRotation(input) {
+      const plot = requirePlot(input?.plotId);
+      const crop = requireCrop(input?.cropId);
+      const event = createRotationEvent({ ...input, plotId: plot.id, cropId: crop.id }, crop, dependencies);
+      const duplicate = repository.listRotationEvents().some((entry) => (
+        entry.plotId === event.plotId && entry.cropId === event.cropId && entry.plantedOn === event.plantedOn
+      ));
+      if (duplicate) {
+        throw new ConflictError('rotation event already exists for this plot, crop and planting date', {
+          plotId: event.plotId,
+          cropId: event.cropId,
+          plantedOn: event.plantedOn
+        });
+      }
+      return repository.createRotationEvent(event);
+    },
+
+    rotationReport(asOf) {
+      return rotationReport({
+        plots: repository.listPlots(),
+        crops: repository.listCrops(),
+        events: repository.listRotationEvents(),
+        asOf: requireDate(asOf, 'asOf')
+      });
     },
 
     calendar(from, to) {
