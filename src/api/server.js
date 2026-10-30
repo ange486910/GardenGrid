@@ -63,6 +63,21 @@ export function createApiServer(service) {
         const cropId = decodeURIComponent(windowMatch[2]);
         return sendJson(response, 200, { data: service.window(cropId, profileId) });
       }
+      const successionMatch = url.pathname.match(/^\/api\/v1\/frost-profiles\/([^/]+)\/succession\/([^/]+)$/);
+      if (successionMatch && method === 'GET') {
+        const profileId = decodeURIComponent(successionMatch[1]);
+        const cropId = decodeURIComponent(successionMatch[2]);
+        const count = url.searchParams.get('count');
+        const intervalDays = url.searchParams.get('intervalDays');
+        return sendJson(response, 200, {
+          data: service.successionPlan(
+            cropId,
+            profileId,
+            count === null ? undefined : Number(count),
+            intervalDays === null ? undefined : Number(intervalDays)
+          )
+        });
+      }
 
       if (method === 'GET' && url.pathname === '/api/v1/plantings') {
         return sendJson(response, 200, { data: service.listPlantings() });

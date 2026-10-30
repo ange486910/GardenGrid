@@ -38,3 +38,21 @@ test('frost API rejects invalid profiles and unknown ids', async () => {
     assert.equal(missing.status, 404);
   } finally { await f.close(); }
 });
+
+test('frost API returns succession rounds for a custom sowing window', async () => {
+  const f = await fixture();
+  try {
+    const profile = (await f.json('/api/v1/frost-profiles', 'POST', {
+      name: 'Zone 5', zone: '5a', lastFrostDate: '2026-05-15', firstFrostDate: '2026-10-01'
+    })).body.data;
+    const crop = (await f.json('/api/v1/crops', 'POST', {
+      name: 'Cilantro', family: 'Apiaceae', daysToHarvest: 50, frostHardy: true,
+      earliestSowWeeks: -2, latestSowWeeks: 2
+    })).body.data;
+    const plan = await f.json(`/api/v1/frost-profiles/${profile.id}/succession/${crop.id}?count=3&intervalDays=14`);
+    assert.equal(plan.status, 200);
+    assert.deepEqual(plan.body.data.rounds.map((round) => round.sowOn), ['2026-05-01', '2026-05-15', '2026-05-29']);
+    const tooMany = await f.json(`/api/v1/frost-profiles/${profile.id}/succession/${crop.id}?count=5&intervalDays=14`);
+    assert.equal(tooMany.status, 400);
+  } finally { await f.close(); }
+});
