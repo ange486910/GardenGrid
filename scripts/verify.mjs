@@ -18,8 +18,10 @@ function walk(directory) {
   return files;
 }
 run(['scripts/baseline-check.mjs']);
+run(['scripts/style-check.mjs']);
 for (const file of walk('src').concat(walk('scripts'), walk('tests'))) {
   if (['.js', '.mjs'].includes(extname(file))) run(['--check', file]);
 }
 run(['--test']);
 console.log(JSON.stringify({ status: 'ok', checks: ['syntax', 'tests'] }));
+

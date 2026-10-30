@@ -30,7 +30,7 @@ const milestones = tags.map((tag, index) => {
   const stat = stats(from, tag);
   return { tag, from, to: tag, ...stat, meetsFloor: stat.churn >= 1500 && stat.files >= 10 };
 });
-const targets = { commits: 30, codeFiles: 100, codeLines: 9000, milestones: 6 };
+const targets = { commits: 30, codeFiles: 100, codeLines: 10500, milestones: 7 };
 const undersized = milestones.filter((milestone) => !milestone.meetsFloor);
 const complete = commits >= targets.commits && codeFiles.length >= targets.codeFiles && loc >= targets.codeLines && tags.length >= targets.milestones && undersized.length === 0;
 console.log(JSON.stringify({
@@ -46,3 +46,4 @@ console.log(JSON.stringify({
   undersizedMilestones: undersized.map((milestone) => milestone.tag)
 }, null, 2));
 if (undersized.length > 0) process.exit(1);
+
