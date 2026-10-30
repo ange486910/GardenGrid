@@ -33,6 +33,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js window --crop <id> --profile <id> [--database <path>]
   node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
   node src/cli/index.js yield [--database <path>]
+  node src/cli/index.js companions [--database <path>]
   node src/cli/index.js serve [--port <port>] [--database <path>]
 `;
 
@@ -69,6 +70,11 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', yield: app.service.yieldReport() }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'companions') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', ...app.service.companionReport() }, null, 2));
   } finally { app.close(); }
 } else if (command === 'serve') {
   const app = createApplication({ databasePath: options.databasePath });
