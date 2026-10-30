@@ -19,6 +19,20 @@ function mapPlanting(row) {
   return { id: row.id, plotId: row.plot_id, cropId: row.crop_id, plantedOn: row.planted_on, expectedHarvestOn: row.expected_harvest_on, status: row.status, createdAt: row.created_at };
 }
 
+function mapRotationEvent(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    plotId: row.plot_id,
+    cropId: row.crop_id,
+    family: row.family,
+    cropName: row.crop_name,
+    plantedOn: row.planted_on,
+    endedOn: row.ended_on,
+    createdAt: row.created_at
+  };
+}
+
 export class GardenRepository {
   constructor(db) {
     this.db = db;
@@ -36,7 +50,13 @@ export class GardenRepository {
       listHarvestsByPlanting: db.prepare('SELECT * FROM harvests WHERE planting_id = ? ORDER BY harvested_on ASC, id ASC'),
       insertHarvest: db.prepare('INSERT INTO harvests (id, planting_id, harvested_on, quantity, unit, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       listPlantings: db.prepare('SELECT * FROM plantings ORDER BY planted_on ASC, id ASC'),
-      insertPlanting: db.prepare('INSERT INTO plantings (id, plot_id, crop_id, planted_on, expected_harvest_on, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      insertPlanting: db.prepare('INSERT INTO plantings (id, plot_id, crop_id, planted_on, expected_harvest_on, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+      listRotationEvents: db.prepare('SELECT * FROM rotation_events ORDER BY planted_on DESC, id DESC'),
+      listRotationEventsByPlot: db.prepare('SELECT * FROM rotation_events WHERE plot_id = ? ORDER BY planted_on DESC, id DESC'),
+      insertRotationEvent: db.prepare(
+        'INSERT INTO rotation_events (id, plot_id, crop_id, family, crop_name, planted_on, ended_on, created_at) '
+        + 'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      )
     };
   }
 
@@ -65,6 +85,21 @@ export class GardenRepository {
     );
     return planting;
   }
+  listRotationEvents() { return this.statements.listRotationEvents.all().map(mapRotationEvent); }
+  listRotationEventsByPlot(plotId) { return this.statements.listRotationEventsByPlot.all(plotId).map(mapRotationEvent); }
+  createRotationEvent(event) {
+    this.statements.insertRotationEvent.run(
+      event.id,
+      event.plotId,
+      event.cropId,
+      event.family,
+      event.cropName,
+      event.plantedOn,
+      event.endedOn,
+      event.createdAt
+    );
+    return event;
+  }
 }
 
-export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest };
+export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent };

@@ -10,10 +10,30 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4]);
     assert.deepEqual(migrateDatabase(db), []);
-    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings') ORDER BY name`).all().map((row) => row.name);
-    assert.deepEqual(tables, ['crops', 'plantings', 'plots']);
+    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events') ORDER BY name`).all().map((row) => row.name);
+    assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events']);
+  } finally { db.close(); }
+});
+
+test('repository stores crop and family snapshots for rotation history', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    const createdAt = '2026-10-30T08:00:00.000Z';
+    repository.createPlot({ id: 'bed_a', name: 'Bed A', areaSqm: 6, sunExposure: 'full', createdAt });
+    repository.createCrop({ id: 'tomato', name: 'Tomato', family: 'Solanaceae', daysToHarvest: 70, frostHardy: false, createdAt });
+    const event = repository.createRotationEvent({
+      id: 'rotation_old', plotId: 'bed_a', cropId: 'tomato', family: 'Solanaceae',
+      cropName: 'Tomato', plantedOn: '2023-05-01', endedOn: '2023-08-01', createdAt
+    });
+
+    assert.equal(repository.listRotationEventsByPlot('bed_a').length, 1);
+    assert.equal(repository.listRotationEventsByPlot('bed_a')[0].cropName, 'Tomato');
+    assert.equal(event.family, 'Solanaceae');
+    assert.equal(repository.listRotationEvents()[0].endedOn, '2023-08-01');
   } finally { db.close(); }
 });
 
