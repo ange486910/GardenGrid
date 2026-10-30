@@ -1,4 +1,4 @@
-import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, sowingWindow, yieldSummary } from '../domain/garden.js';
+import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, sowingWindow, successionSchedule, yieldSummary } from '../domain/garden.js';
 import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { ConflictError, NotFoundError, requireDate } from '../domain/validation.js';
@@ -51,6 +51,12 @@ export function createGardenService(repository, dependencies = {}) {
       const crop = requireCrop(cropId);
       const profile = requireFrostProfile(profileId);
       return sowingWindow(crop, profile);
+    },
+
+    successionPlan(cropId, profileId, count, intervalDays) {
+      const crop = requireCrop(cropId);
+      const profile = requireFrostProfile(profileId);
+      return successionSchedule({ crop, profile, count: count ?? 4, intervalDays: intervalDays ?? 14 });
     },
 
     plant(input) {
