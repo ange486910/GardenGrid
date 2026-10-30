@@ -76,6 +76,15 @@ export function createApiServer(service) {
       if (method === 'POST' && url.pathname === '/api/v1/harvests') {
         return sendJson(response, 201, { data: service.recordHarvest(await readJson(request)) });
       }
+      if (method === 'GET' && url.pathname === '/api/v1/rotation-events') {
+        return sendJson(response, 200, { data: service.listRotationEvents() });
+      }
+      if (method === 'POST' && url.pathname === '/api/v1/rotation-events') {
+        return sendJson(response, 201, { data: service.recordRotation(await readJson(request)) });
+      }
+      if (method === 'GET' && url.pathname === '/api/v1/rotation-report') {
+        return sendJson(response, 200, { data: service.rotationReport(url.searchParams.get('asOf')) });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/companions') {
         return sendJson(response, 200, { data: service.companionReport() });
       }
