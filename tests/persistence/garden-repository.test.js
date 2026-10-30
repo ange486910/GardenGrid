@@ -10,10 +10,24 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5]);
     assert.deepEqual(migrateDatabase(db), []);
     const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events') ORDER BY name`).all().map((row) => row.name);
     assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events']);
+  } finally { db.close(); }
+});
+
+test('repository preserves custom sowing offsets on crops', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    const crop = repository.createCrop({
+      id: 'cilantro', name: 'Cilantro', family: 'Apiaceae', daysToHarvest: 50, frostHardy: true,
+      earliestSowWeeks: -2, latestSowWeeks: 2, createdAt: '2026-10-30T08:00:00.000Z'
+    });
+    assert.equal(repository.findCrop(crop.id).earliestSowWeeks, -2);
+    assert.equal(repository.findCrop(crop.id).latestSowWeeks, 2);
   } finally { db.close(); }
 });
 
