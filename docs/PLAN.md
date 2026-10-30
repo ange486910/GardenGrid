@@ -1,43 +1,72 @@
-# 13-Day Delivery Plan
+# Delivery Plan - GardenGrid
 
-Target: **7 milestones, >=10,500 code lines, >=100 non-Markdown code files, >=30 commits.**
+## Targets
 
-| Day | Deliverable |
-| --- | --- |
-| D1 | Domain rules, SQLite schema, repositories |
-| D2 | HTTP API, CLI, end-to-end tests |
-| D3 | Core record workflow (second domain slice) |
-| D4 | Import or derived report with failure tests |
-| D5 | Advanced domain rules (transfers / rotation history / history import) |
-| D6 | Rule reports + API + CLI + tests |
-| D7 | Analytics and trend reporting |
-| D8 | Export/import round-trip + audit checks |
-| D9 | Web workspace: layout, store, API client |
-| D10 | Web views + DOM interaction tests |
-| D11 | Docker, CI, security and accessibility gates |
-| D12 | Acceptance audit, docs, release manifest |
-| D13 | Final verification, dual-remote release, tag |
+- 7 contiguous milestones. Each must change >=1500 code lines across >=10 code files.
+- >=100 non-Markdown code files and >=30 commits.
+- M1 starts at the repository root commit and must be buildable offline.
 
-## Seven milestones
+## Milestones
 
-Milestone boundaries are chosen from real commits after the code is written, so every block changes **>=1500 code lines across >=10 code files**:
+### M1 - Plots, crops and planting rules (D1-D2)
 
-1. Foundation and domain rules
-2. Persistence and HTTP API
-3. Core record workflow
-4. Advanced domain rules
-5. Analytics and export
-6. Browser workspace
-7. Hardening, acceptance and release
+Objective: plot/crop/planting domain rules, rotation conflict detection, calendar.
 
-No tag is created until its block meets the floor. Tags are `m1` ... `m7` and contiguous.
+- Start: root commit. End: `m1`.
+- Failing-at-start assertion: `node --test tests/domain` cannot run because the domain modules do not exist.
+- Passing-at-end assertion: `node --test tests/domain` passes, including the three-year rotation case.
 
-## Hard gates
+### M2 - Persistence and HTTP API (D2-D3)
 
-- At least 30 commits and 100 non-Markdown code files by D13.
-- No source change after the last milestone tag; later commits may only edit Markdown, proven with `git diff --numstat m7..HEAD -- '*.js' '*.mjs' '*.cjs' '*.sql' '*.css' '*.html'`.
-- Every commit includes a non-Markdown code, test, script, CI, or infrastructure change.
-- The full suite must pass twice in the same checkout without manual cleanup.
-- Multi-write flows must be transactional and covered by a failure-injection regression test.
-- Source files pass `scripts/style-check.mjs`: max 200 characters per line, no filler comments, no emoji, no untracked TODO/FIXME.
-- Dates are real; no backfilled or fabricated history.
+Objective: SQLite schema, repositories, HTTP envelope, CLI.
+
+- Start: `m1`. End: `m2`.
+- Failing-at-start assertion: `node tests/persistence/garden-repository.test.js` fails (no migration).
+- Passing-at-end assertion: the same file passes; `GET /api/v1/health` returns 200.
+
+### M3 - Frost profiles and sowing windows (D3-D4)
+
+Objective: frost profiles, hardy/tender sowing windows, harvest records and yield summary.
+
+- Start: `m2`. End: `m3`.
+- Failing-at-start assertion: `/api/v1/frost-profiles` returns 404.
+- Passing-at-end assertion: hardy and tender windows differ around the last frost date; `/api/v1/yield` aggregates harvests by crop and unit.
+
+### M4 - Advanced rules: companions and rotation history (D5-D6)
+
+Objective: companion/antagonist detection and a three-year rotation report per plot.
+
+- Start: `m3`. End: `m4`.
+- Failing-at-start assertion: `/api/v1/companions` returns 404.
+- Passing-at-end assertion: the report lists the antagonist pair before the companion pair and groups rotation history by plot.
+
+### M5 - Season analytics and export (D7-D8)
+
+Objective: season calendar export and yield/rotation summaries with round-trip checks.
+
+- Start: `m4`. End: `m5`.
+- Failing-at-start assertion: no export endpoint exists.
+- Passing-at-end assertion: the exported season plan re-imports with identical plantings and harvest totals.
+
+### M6 - Browser workspace (D9-D10)
+
+Objective: plot, crop, calendar and harvest views with DOM interaction tests.
+
+- Start: `m5`. End: `m6`.
+- Failing-at-start assertion: no web assets are served.
+- Passing-at-end assertion: `GET /` returns 200 and the DOM interaction suite passes.
+
+### M7 - Hardening, acceptance and release (D11-D13)
+
+Objective: Docker, CI, security and accessibility gates, acceptance audit, release tag.
+
+- Start: `m6`. End: `m7`.
+- Failing-at-start assertion: `node scripts/verify.mjs` is missing CI and acceptance steps.
+- Passing-at-end assertion: `verify.mjs` and `milestone-check.mjs` both pass.
+
+## Boundary rules
+
+- The start commit of each milestone is the end commit of the previous one; M1 starts at the root commit.
+- A boundary is placed where a requirement is complete and testable, not at a fixed day count.
+- Unrelated commits inside a range are disclosed in that milestone note.
+- Final boundaries are chosen from real commits after the code is written.
