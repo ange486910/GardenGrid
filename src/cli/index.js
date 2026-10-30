@@ -24,6 +24,13 @@ function parse(argv) {
     else if (token === '--plot') options.plot = argv[++index];
     else if (token === '--ended') options.ended = argv[++index];
     else if (token === '--as-of') options.asOf = argv[++index];
+    else if (token === '--family') options.family = argv[++index];
+    else if (token === '--days') options.days = Number(argv[++index]);
+    else if (token === '--frost-hardy') options.frostHardy = argv[++index] !== 'false';
+    else if (token === '--earliest-weeks') options.earliestWeeks = Number(argv[++index]);
+    else if (token === '--latest-weeks') options.latestWeeks = Number(argv[++index]);
+    else if (token === '--count') options.count = Number(argv[++index]);
+    else if (token === '--interval-days') options.intervalDays = Number(argv[++index]);
   }
   return { command, options };
 }
@@ -39,6 +46,8 @@ const help = `GardenGrid CLI
   node src/cli/index.js companions [--database <path>]
   node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
+  node src/cli/index.js crop --name <name> --family <family> --days <n> --frost-hardy <true|false>
+  node src/cli/index.js succession --crop <id> --profile <id> --count <n> --interval-days <n>
   node src/cli/index.js serve [--port <port>] [--database <path>]
 `;
 
@@ -102,6 +111,25 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', report: app.service.rotationReport(options.asOf) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'crop') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const crop = app.service.createCrop({
+      name: options.name,
+      family: options.family,
+      daysToHarvest: options.days,
+      frostHardy: options.frostHardy,
+      earliestSowWeeks: Number.isNaN(options.earliestWeeks) ? null : options.earliestWeeks,
+      latestSowWeeks: Number.isNaN(options.latestWeeks) ? null : options.latestWeeks
+    });
+    console.log(JSON.stringify({ status: 'ok', crop }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'succession') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const plan = app.service.successionPlan(options.crop, options.profile, options.count, options.intervalDays);
+    console.log(JSON.stringify({ status: 'ok', plan }, null, 2));
   } finally { app.close(); }
 } else if (command === 'serve') {
   const app = createApplication({ databasePath: options.databasePath });

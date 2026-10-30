@@ -11,6 +11,7 @@ calendar. It runs on Node.js 24 with no third-party runtime dependencies and use
 - CLI for migrate, calendar and serve.
 - Frost-aware sowing windows, harvest yields and companion analysis.
 - Rotation history snapshots with a three-year per-plot report.
+- Crop-specific sowing offsets and succession-round plans.
 
 ## Run
 
@@ -23,6 +24,8 @@ node src/cli/index.js companions
 node src/cli/index.js yield
 node src/cli/index.js rotation-record --plot <id> --crop <id> --date 2024-05-01 --ended 2024-08-01
 node src/cli/index.js rotation-report --as-of 2026-10-30
+node src/cli/index.js crop --name Cilantro --family Apiaceae --days 50 --frost-hardy true --earliest-weeks -2 --latest-weeks 2
+node src/cli/index.js succession --crop <id> --profile <id> --count 3 --interval-days 14
 node src/cli/index.js serve
 ```
 
@@ -38,6 +41,7 @@ node src/cli/index.js serve
 - `GET /api/v1/yield`
 - `GET|POST /api/v1/rotation-events`
 - `GET /api/v1/rotation-report?asOf=YYYY-MM-DD`
+- `GET /api/v1/frost-profiles/:id/succession/:cropId?count=4&intervalDays=14`
 - `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
 ## License

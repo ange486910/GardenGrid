@@ -6,6 +6,7 @@
 - >=100 non-Markdown code files and >=30 commits.
 - M1 starts at the repository root commit and must be buildable offline.
 - D1-D5 are implemented and covered by tests; milestone boundaries remain unfrozen until final sizing.
+- D6 adds crop-level sowing offsets and succession schedules constrained by each crop's frost window.
 
 ## Milestones
 
@@ -27,11 +28,11 @@ Objective: SQLite schema, repositories, HTTP envelope, CLI.
 
 ### M3 - Frost profiles and sowing windows (D3-D4)
 
-Objective: frost profiles, hardy/tender sowing windows, harvest records and yield summary.
+Objective: frost profiles, crop-specific sowing windows and succession plans, harvest records and yield summary.
 
 - Start: `m2`. End: `m3`.
 - Failing-at-start assertion: `/api/v1/frost-profiles` returns 404.
-- Passing-at-end assertion: hardy and tender windows differ around the last frost date; `/api/v1/yield` aggregates harvests by crop and unit.
+- Passing-at-end assertion: frost windows honor per-crop offsets, succession rounds stay inside the window, and `/api/v1/yield` aggregates harvests by crop and unit.
 
 ### M4 - Advanced rules: companions and rotation history (D5-D6)
 
