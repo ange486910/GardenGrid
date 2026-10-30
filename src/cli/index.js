@@ -21,6 +21,9 @@ function parse(argv) {
     else if (token === '--date') options.date = argv[++index];
     else if (token === '--quantity') options.quantity = Number(argv[++index]);
     else if (token === '--unit') options.unit = argv[++index];
+    else if (token === '--plot') options.plot = argv[++index];
+    else if (token === '--ended') options.ended = argv[++index];
+    else if (token === '--as-of') options.asOf = argv[++index];
   }
   return { command, options };
 }
@@ -34,6 +37,8 @@ const help = `GardenGrid CLI
   node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
   node src/cli/index.js yield [--database <path>]
   node src/cli/index.js companions [--database <path>]
+  node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
+  node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
   node src/cli/index.js serve [--port <port>] [--database <path>]
 `;
 
@@ -81,6 +86,22 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', ...app.service.companionReport() }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'rotation-record') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const event = app.service.recordRotation({
+      plotId: options.plot,
+      cropId: options.crop,
+      plantedOn: options.date,
+      endedOn: options.ended
+    });
+    console.log(JSON.stringify({ status: 'ok', event }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'rotation-report') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', report: app.service.rotationReport(options.asOf) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'serve') {
   const app = createApplication({ databasePath: options.databasePath });

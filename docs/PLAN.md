@@ -5,6 +5,7 @@
 - 7 contiguous milestones. Each must change >=1500 code lines across >=10 code files.
 - >=100 non-Markdown code files and >=30 commits.
 - M1 starts at the repository root commit and must be buildable offline.
+- D1-D5 are implemented and covered by tests; milestone boundaries remain unfrozen until final sizing.
 
 ## Milestones
 
@@ -38,7 +39,7 @@ Objective: companion/antagonist detection and a three-year rotation report per p
 
 - Start: `m3`. End: `m4`.
 - Failing-at-start assertion: `/api/v1/companions` returns 404.
-- Passing-at-end assertion: the report lists the antagonist pair before the companion pair and groups rotation history by plot.
+- Passing-at-end assertion: the report lists the antagonist pair before the companion pair, blocks families from the previous three years, and rolls back a planting when its history snapshot cannot be written.
 
 ### M5 - Season analytics and export (D7-D8)
 

@@ -3,12 +3,14 @@
 GardenGrid is an offline-first garden planner: plots, crops, plantings and a planting/harvest
 calendar. It runs on Node.js 24 with no third-party runtime dependencies and uses SQLite.
 
-## Day 1 scope
+## Current scope
 
 - Plot, crop and planting domain rules, including a three-year rotation check.
 - SQLite migration and repositories.
 - HTTP API with a planting/harvest calendar.
 - CLI for migrate, calendar and serve.
+- Frost-aware sowing windows, harvest yields and companion analysis.
+- Rotation history snapshots with a three-year per-plot report.
 
 ## Run
 
@@ -19,6 +21,8 @@ node src/cli/index.js frost --name "Zone 5" --zone 5a --last-frost 2026-05-15 --
 node src/cli/index.js harvest --planting <id> --date 2026-10-20 --quantity 2.5 --unit kg
 node src/cli/index.js companions
 node src/cli/index.js yield
+node src/cli/index.js rotation-record --plot <id> --crop <id> --date 2024-05-01 --ended 2024-08-01
+node src/cli/index.js rotation-report --as-of 2026-10-30
 node src/cli/index.js serve
 ```
 
@@ -32,6 +36,8 @@ node src/cli/index.js serve
 - `GET|POST /api/v1/harvests`
 - `GET /api/v1/companions`
 - `GET /api/v1/yield`
+- `GET|POST /api/v1/rotation-events`
+- `GET /api/v1/rotation-report?asOf=YYYY-MM-DD`
 - `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
 
 ## License
