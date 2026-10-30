@@ -64,7 +64,13 @@ if (command === 'migrate') {
 } else if (command === 'harvest') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
-    console.log(JSON.stringify({ status: 'ok', harvest: app.service.recordHarvest({ plantingId: options.planting, harvestedOn: options.date, quantity: options.quantity, unit: options.unit }) }, null, 2));
+    const harvest = app.service.recordHarvest({
+      plantingId: options.planting,
+      harvestedOn: options.date,
+      quantity: options.quantity,
+      unit: options.unit
+    });
+    console.log(JSON.stringify({ status: 'ok', harvest }, null, 2));
   } finally { app.close(); }
 } else if (command === 'yield') {
   const app = createApplication({ databasePath: options.databasePath });

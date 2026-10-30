@@ -80,7 +80,15 @@ export function calendarEvents({ plantings, crops, plots, from, to }) {
     const plot = plotById.get(planting.plotId);
     if (!crop || !plot) continue;
     if (planting.plantedOn >= from && planting.plantedOn <= to) events.push({ date: planting.plantedOn, type: 'plant', plantingId: planting.id, crop: crop.name, plot: plot.name });
-    if (planting.expectedHarvestOn >= from && planting.expectedHarvestOn <= to) events.push({ date: planting.expectedHarvestOn, type: 'harvest', plantingId: planting.id, crop: crop.name, plot: plot.name });
+    if (planting.expectedHarvestOn >= from && planting.expectedHarvestOn <= to) {
+      events.push({
+        date: planting.expectedHarvestOn,
+        type: 'harvest',
+        plantingId: planting.id,
+        crop: crop.name,
+        plot: plot.name
+      });
+    }
   }
   return events.sort((left, right) => left.date.localeCompare(right.date) || left.type.localeCompare(right.type));
 }

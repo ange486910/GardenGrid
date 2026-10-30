@@ -53,7 +53,18 @@ export class GardenRepository {
   listHarvestsByPlanting(plantingId) { return this.statements.listHarvestsByPlanting.all(plantingId).map(mapHarvest); }
   createHarvest(harvest) { this.statements.insertHarvest.run(harvest.id, harvest.plantingId, harvest.harvestedOn, harvest.quantity, harvest.unit, harvest.createdAt); return harvest; }
   listPlantings() { return this.statements.listPlantings.all().map(mapPlanting); }
-  createPlanting(planting) { this.statements.insertPlanting.run(planting.id, planting.plotId, planting.cropId, planting.plantedOn, planting.expectedHarvestOn, planting.status, planting.createdAt); return planting; }
+  createPlanting(planting) {
+    this.statements.insertPlanting.run(
+      planting.id,
+      planting.plotId,
+      planting.cropId,
+      planting.plantedOn,
+      planting.expectedHarvestOn,
+      planting.status,
+      planting.createdAt
+    );
+    return planting;
+  }
 }
 
 export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest };
