@@ -18,16 +18,18 @@ Target: **6 milestones, >=9,000 code lines, >=100 non-Markdown code files, >=30 
 | D12 | Acceptance audit, docs, release manifest | M6 |
 | D13 | Final verification, dual-remote release, tag | M6 |
 
-## Milestones
+## Milestones (boundaries fixed at the end)
 
-- M1: D1-D2 (foundation and core workflow)
-- M2: D3-D4 (records and first report)
-- M3: D5-D6 (advanced rules)
-- M4: D7-D8 (analytics and export)
-- M5: D9-D10 (browser workspace)
-- M6: D11-D13 (hardening and release)
+Six content milestones. Their exact commit boundaries are chosen from real commits **after** the code is written, so every block changes **>=1500 code lines across >=10 code files**:
 
-Each milestone must be tagged `m1` ... `m6` and must change **>=1500 code lines across >=10 code files**.
+1. Foundation and core workflow
+2. Records and derived reports
+3. Advanced domain rules
+4. Analytics and export
+5. Browser workspace
+6. Hardening, acceptance and release
+
+No milestone tag is created until its block meets the floor. Tags are `m1` ... `m6` and must be contiguous (`m1` end = `m2` start, and so on).
 
 ## Hard gates
 
@@ -37,3 +39,4 @@ Each milestone must be tagged `m1` ... `m6` and must change **>=1500 code lines 
 - The full suite must pass twice in the same checkout without manual cleanup.
 - Multi-write flows must be transactional and covered by a failure-injection regression test.
 - Dates are real; no backfilled or fabricated history.
+
