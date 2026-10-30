@@ -20,11 +20,25 @@ export function createPlot(input, dependencies = {}) {
 export function validateCropInput(input = {}) {
   const payload = requireObject(input, 'crop');
   if (typeof payload.frostHardy !== 'boolean') throw new ValidationError('frostHardy must be a boolean', { field: 'frostHardy' });
+  const earliestSowWeeks = payload.earliestSowWeeks == null
+    ? null
+    : requireInteger(payload.earliestSowWeeks, 'earliestSowWeeks', { min: -26, max: 26 });
+  const latestSowWeeks = payload.latestSowWeeks == null
+    ? null
+    : requireInteger(payload.latestSowWeeks, 'latestSowWeeks', { min: -26, max: 26 });
+  if ((earliestSowWeeks === null) !== (latestSowWeeks === null)) {
+    throw new ValidationError('earliestSowWeeks and latestSowWeeks must be provided together', { field: 'sowWeeks' });
+  }
+  if (earliestSowWeeks !== null && earliestSowWeeks > latestSowWeeks) {
+    throw new ValidationError('earliestSowWeeks must not exceed latestSowWeeks', { field: 'earliestSowWeeks' });
+  }
   return {
     name: requireString(payload.name, 'name', { maxLength: 80 }),
     family: requireString(payload.family, 'family', { maxLength: 60 }),
     daysToHarvest: requireInteger(payload.daysToHarvest, 'daysToHarvest', { min: 1, max: 365 }),
-    frostHardy: payload.frostHardy
+    frostHardy: payload.frostHardy,
+    earliestSowWeeks,
+    latestSowWeeks
   };
 }
 
@@ -113,10 +127,43 @@ export function createFrostProfile(input, dependencies = {}) {
 }
 
 export function sowingWindow(crop, profile) {
+  if (crop.earliestSowWeeks !== null && crop.earliestSowWeeks !== undefined) {
+    const earliest = addDays(profile.lastFrostDate, crop.earliestSowWeeks * 7);
+    const latest = addDays(profile.lastFrostDate, crop.latestSowWeeks * 7);
+    return {
+      cropId: crop.id,
+      profileId: profile.id,
+      earliest,
+      latest,
+      relativeToFrost: crop.earliestSowWeeks < 0 ? 'before' : 'after'
+    };
+  }
   if (crop.frostHardy) {
     return { cropId: crop.id, profileId: profile.id, earliest: addDays(profile.lastFrostDate, -28), latest: addDays(profile.lastFrostDate, -14), relativeToFrost: 'before' };
   }
   return { cropId: crop.id, profileId: profile.id, earliest: addDays(profile.lastFrostDate, 7), latest: addDays(profile.lastFrostDate, 21), relativeToFrost: 'after' };
+}
+
+export function successionSchedule({ crop, profile, count = 4, intervalDays = 14 }) {
+  const rounds = requireInteger(count, 'count', { min: 1, max: 12 });
+  const spacing = requireInteger(intervalDays, 'intervalDays', { min: 7, max: 60 });
+  const window = sowingWindow(crop, profile);
+  const lastSow = addDays(window.earliest, (rounds - 1) * spacing);
+  if (lastSow > window.latest) {
+    throw new ValidationError('succession schedule exceeds the crop sowing window', {
+      field: 'intervalDays', earliest: window.earliest, latest: window.latest, lastSow
+    });
+  }
+  return {
+    cropId: crop.id,
+    profileId: profile.id,
+    count: rounds,
+    intervalDays: spacing,
+    rounds: Array.from({ length: rounds }, (_, index) => {
+      const sowOn = addDays(window.earliest, index * spacing);
+      return { sowOn, expectedHarvestOn: addDays(sowOn, crop.daysToHarvest) };
+    })
+  };
 }
 
 export const HARVEST_UNITS = Object.freeze(['kg', 'g', 'count', 'bunch']);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarEvents, createCrop, createPlanting, createPlot, expectedHarvestDate, rotationConflict, validateCropInput, validatePlotInput } from '../../src/domain/garden.js';
+import { calendarEvents, createCrop, createPlanting, createPlot, expectedHarvestDate, rotationConflict, successionSchedule, validateCropInput, validatePlotInput } from '../../src/domain/garden.js';
 
 let counter = 0;
 const deps = { clock: { now: () => new Date('2026-10-28T08:00:00.000Z') }, createId: (prefix) => `${prefix}_${++counter}` };
@@ -38,4 +38,23 @@ test('calendar lists plant and harvest events in range', () => {
   const events = calendarEvents({ plantings: [planting], crops: [crop], plots: [plot], from: '2026-10-01', to: '2026-11-30' });
   assert.deepEqual(events.map((event) => event.type), ['plant', 'harvest']);
   assert.equal(events[1].date, '2026-11-15');
+});
+
+test('crop sowing offsets override frost defaults and drive succession rounds', () => {
+  const crop = createCrop({
+    name: 'Cilantro', family: 'Apiaceae', daysToHarvest: 50, frostHardy: true,
+    earliestSowWeeks: -2, latestSowWeeks: 2
+  }, deps);
+  const profile = { id: 'frost_1', lastFrostDate: '2026-05-15' };
+  const plan = successionSchedule({ crop, profile, count: 3, intervalDays: 14 });
+  assert.equal(plan.rounds[0].sowOn, '2026-05-01');
+  assert.deepEqual(plan.rounds.map((round) => round.sowOn), ['2026-05-01', '2026-05-15', '2026-05-29']);
+  assert.equal(plan.rounds[0].expectedHarvestOn, '2026-06-20');
+  assert.throws(() => successionSchedule({ crop, profile, count: 4, intervalDays: 14 }), /exceeds/);
+});
+
+test('crop sowing offsets must be supplied as an ordered pair', () => {
+  const base = { name: 'Basil', family: 'Lamiaceae', daysToHarvest: 60, frostHardy: false };
+  assert.throws(() => validateCropInput({ ...base, earliestSowWeeks: 1 }), /provided together/);
+  assert.throws(() => validateCropInput({ ...base, earliestSowWeeks: 3, latestSowWeeks: 2 }), /must not exceed/);
 });
