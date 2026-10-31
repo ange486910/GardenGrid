@@ -29,6 +29,8 @@ node src/cli/index.js crop --name Cilantro --family Apiaceae --days 50 --frost-h
 node src/cli/index.js succession --crop <id> --profile <id> --count 3 --interval-days 14
 node src/cli/index.js yield --plot <plot-id>
 node src/cli/index.js season-export --file data/season.json --format json
+node src/cli/index.js season-import --file data/season.json --dry-run
+node src/cli/index.js season-import --file data/season.json
 node src/cli/index.js serve
 ```
 
@@ -44,6 +46,7 @@ node src/cli/index.js serve
 - `GET /api/v1/yield`
 - `GET /api/v1/yield?plotId=<id>`
 - `GET /api/v1/exports/season?format=json|csv`
+- `POST /api/v1/imports/season` with a season snapshot and optional `dryRun`
 - `GET|POST /api/v1/rotation-events`
 - `GET /api/v1/rotation-report?asOf=YYYY-MM-DD`
 - `GET /api/v1/frost-profiles/:id/succession/:cropId?count=4&intervalDays=14`

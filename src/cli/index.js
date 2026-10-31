@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createApplication } from '../application/create-application.js';
 import { startServer } from '../api/server.js';
 
@@ -34,6 +34,7 @@ function parse(argv) {
     else if (token === '--interval-days') options.intervalDays = Number(argv[++index]);
     else if (token === '--file') options.file = argv[++index];
     else if (token === '--format') options.format = argv[++index];
+    else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
 }
@@ -47,6 +48,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
   node src/cli/index.js yield [--plot <id>] [--database <path>]
   node src/cli/index.js season-export --file <path> --format <json|csv> [--database <path>]
+  node src/cli/index.js season-import --file <json> [--dry-run] [--database <path>]
   node src/cli/index.js companions [--database <path>]
   node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
@@ -107,6 +109,13 @@ if (command === 'migrate') {
     console.log(JSON.stringify({
       status: 'ok', file: options.file, format: result.format, checksum: result.checksum
     }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'season-import') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const snapshot = JSON.parse(readFileSync(options.file, 'utf8'));
+    const result = app.service.importSeason(snapshot, { dryRun: options.dryRun === true });
+    console.log(JSON.stringify({ status: 'ok', ...result }, null, 2));
   } finally { app.close(); }
 } else if (command === 'companions') {
   const app = createApplication({ databasePath: options.databasePath });

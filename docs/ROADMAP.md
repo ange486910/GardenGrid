@@ -8,6 +8,4 @@
 
 4. **Calendar filtering by plot:** `calendarEvents` returns every plot. Add a `plotId` parameter to the domain function and a `--plot` option to the `calendar` CLI command.
 
-5. **Season import validation:** exports can be downloaded, but there is no importer. Add a validated import that maps names to ids, rejects overlapping planting windows in one bed, and performs the entire merge in one transaction.
-
-6. **Succession plan persistence:** `successionPlan` currently returns calculated dates without creating plantings. Add a reviewed bulk-create command that records the selected rounds and writes their rotation snapshots atomically.
+5. **Succession plan persistence:** `successionPlan` currently returns calculated dates without creating plantings. Add a reviewed bulk-create command that records the selected rounds and writes their rotation snapshots atomically.
