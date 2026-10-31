@@ -9,6 +9,10 @@ export function seasonCsvCell(value) {
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
+export function seasonExportChecksum(manifest, data) {
+  return createHash('sha256').update(JSON.stringify({ manifest, data })).digest('hex');
+}
+
 function requireTimestamp(value) {
   if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
     throw new ValidationError('generatedAt must be an ISO timestamp', { field: 'generatedAt' });
@@ -58,7 +62,7 @@ export function buildSeasonExport({ plots, crops, plantings, harvests, rotationE
   return {
     manifest,
     data,
-    checksum: createHash('sha256').update(JSON.stringify({ manifest, data })).digest('hex')
+    checksum: seasonExportChecksum(manifest, data)
   };
 }
 
