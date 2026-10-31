@@ -7,6 +7,7 @@
 - M1 starts at the repository root commit and must be buildable offline.
 - D1-D5 are implemented and covered by tests; milestone boundaries remain unfrozen until final sizing.
 - D6 adds crop-level sowing offsets and succession schedules constrained by each crop's frost window.
+- D7 adds plot-level yield projection and checksummed season exports.
 
 ## Milestones
 

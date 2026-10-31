@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { writeFileSync } from 'node:fs';
 import { createApplication } from '../application/create-application.js';
 import { startServer } from '../api/server.js';
 
@@ -31,6 +32,8 @@ function parse(argv) {
     else if (token === '--latest-weeks') options.latestWeeks = Number(argv[++index]);
     else if (token === '--count') options.count = Number(argv[++index]);
     else if (token === '--interval-days') options.intervalDays = Number(argv[++index]);
+    else if (token === '--file') options.file = argv[++index];
+    else if (token === '--format') options.format = argv[++index];
   }
   return { command, options };
 }
@@ -42,7 +45,8 @@ const help = `GardenGrid CLI
   node src/cli/index.js frost --name <name> --zone <zone> --last-frost YYYY-MM-DD --first-frost YYYY-MM-DD
   node src/cli/index.js window --crop <id> --profile <id> [--database <path>]
   node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
-  node src/cli/index.js yield [--database <path>]
+  node src/cli/index.js yield [--plot <id>] [--database <path>]
+  node src/cli/index.js season-export --file <path> --format <json|csv> [--database <path>]
   node src/cli/index.js companions [--database <path>]
   node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
@@ -89,7 +93,20 @@ if (command === 'migrate') {
 } else if (command === 'yield') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
-    console.log(JSON.stringify({ status: 'ok', yield: app.service.yieldReport() }, null, 2));
+    const report = options.plot ? app.service.yieldByPlot(options.plot) : app.service.yieldReport();
+    console.log(JSON.stringify({ status: 'ok', yield: report }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'season-export') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const result = app.service.exportSeason(options.format ?? 'json');
+    const content = result.format === 'csv'
+      ? result.body
+      : `${JSON.stringify(result.body, null, 2)}\n`;
+    writeFileSync(options.file, content, 'utf8');
+    console.log(JSON.stringify({
+      status: 'ok', file: options.file, format: result.format, checksum: result.checksum
+    }, null, 2));
   } finally { app.close(); }
 } else if (command === 'companions') {
   const app = createApplication({ databasePath: options.databasePath });
