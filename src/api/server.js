@@ -123,6 +123,12 @@ export function createApiServer(service) {
         }
         return sendJson(response, 200, result.body);
       }
+      if (method === 'POST' && url.pathname === '/api/v1/imports/season') {
+        const body = await readJson(request);
+        return sendJson(response, 200, {
+          data: service.importSeason(body.snapshot, { dryRun: body.dryRun === true })
+        });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/calendar') {
         return sendJson(response, 200, {
           data: service.calendar(url.searchParams.get('from'), url.searchParams.get('to'))
