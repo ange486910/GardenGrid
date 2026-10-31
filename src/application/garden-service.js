@@ -1,10 +1,13 @@
 import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, sowingWindow, successionSchedule, yieldSummary } from '../domain/garden.js';
 import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
-import { ConflictError, NotFoundError, requireDate } from '../domain/validation.js';
+import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
+import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
+import { ConflictError, NotFoundError, ValidationError, requireDate } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
   const run = dependencies.transaction ?? ((work) => work());
+  const clock = dependencies.clock ?? { now: () => new Date() };
   function requirePlot(id) {
     const plot = repository.findPlot(id);
     if (!plot) throw new NotFoundError('plot', id);
@@ -45,6 +48,47 @@ export function createGardenService(repository, dependencies = {}) {
 
     yieldReport() {
       return yieldSummary({ harvests: repository.listHarvests(), plantings: repository.listPlantings(), crops: repository.listCrops() });
+    },
+
+    yieldByPlot(plotId) {
+      if (plotId) requirePlot(plotId);
+      return projectYieldByPlot({
+        harvests: repository.listHarvests(),
+        plantings: repository.listPlantings(),
+        crops: repository.listCrops(),
+        plots: repository.listPlots(),
+        plotId: plotId ?? null
+      });
+    },
+
+    exportSeason(format = 'json') {
+      if (!['json', 'csv'].includes(format)) {
+        throw new ValidationError('export format must be json or csv', { field: 'format' });
+      }
+      const exportData = buildSeasonExport({
+        plots: repository.listPlots(),
+        crops: repository.listCrops(),
+        plantings: repository.listPlantings(),
+        harvests: repository.listHarvests(),
+        rotationEvents: repository.listRotationEvents(),
+        generatedAt: clock.now().toISOString()
+      });
+      if (format === 'csv') {
+        return {
+          format,
+          contentType: 'text/csv; charset=utf-8',
+          filename: 'gardengrid-season.csv',
+          checksum: exportData.checksum,
+          body: seasonPlantingsCsv(exportData.data.plantings)
+        };
+      }
+      return {
+        format,
+        contentType: 'application/json; charset=utf-8',
+        filename: 'gardengrid-season.json',
+        checksum: exportData.checksum,
+        body: { ...exportData.manifest, checksum: exportData.checksum, ...exportData.data }
+      };
     },
 
     window(cropId, profileId) {
