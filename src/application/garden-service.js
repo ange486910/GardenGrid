@@ -3,6 +3,7 @@ import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
+import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
 import { ConflictError, NotFoundError, ValidationError, requireDate } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
@@ -88,6 +89,66 @@ export function createGardenService(repository, dependencies = {}) {
         filename: 'gardengrid-season.json',
         checksum: exportData.checksum,
         body: { ...exportData.manifest, checksum: exportData.checksum, ...exportData.data }
+      };
+    },
+
+    importSeason(input, options = {}) {
+      const snapshot = validateSeasonImport(input);
+      const analysis = analyzeSeasonImport({
+        snapshot,
+        plots: repository.listPlots(),
+        crops: repository.listCrops(),
+        plantings: repository.listPlantings()
+      });
+      if (options.dryRun === true) {
+        return {
+          dryRun: true,
+          ready: analysis.ready.length,
+          skipped: analysis.skipped.length,
+          errors: analysis.errors,
+          harvestsEligible: snapshot.harvests.filter((harvest) => (
+            analysis.ready.some((planting) => planting.id === harvest.plantingId)
+          )).length
+        };
+      }
+      const imported = run(() => {
+        const plantingMap = new Map();
+        for (const row of analysis.ready) {
+          const crop = requireCrop(row.cropId);
+          const planting = createPlanting({
+            plotId: row.plotId,
+            cropId: row.cropId,
+            plantedOn: row.plantedOn,
+            status: row.status
+          }, crop, dependencies);
+          planting.expectedHarvestOn = row.expectedHarvestOn;
+          repository.createPlanting(planting);
+          repository.createRotationEvent(createRotationEvent({
+            plotId: row.plotId,
+            cropId: row.cropId,
+            plantedOn: row.plantedOn
+          }, crop, dependencies));
+          plantingMap.set(row.id, planting);
+        }
+        let harvests = 0;
+        for (const row of snapshot.harvests) {
+          const planting = plantingMap.get(row.plantingId);
+          if (!planting) continue;
+          repository.createHarvest(createHarvest({
+            plantingId: planting.id,
+            harvestedOn: row.harvestedOn,
+            quantity: row.quantity,
+            unit: row.unit
+          }, dependencies));
+          harvests += 1;
+        }
+        return { plantings: plantingMap.size, harvests };
+      });
+      return {
+        dryRun: false,
+        imported,
+        skipped: analysis.skipped.length,
+        errors: analysis.errors
       };
     },
 
