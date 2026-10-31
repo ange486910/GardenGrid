@@ -10,6 +10,15 @@ function sendJson(response, status, payload) {
   response.end(body);
 }
 
+function sendDownload(response, contentType, filename, body) {
+  response.writeHead(200, {
+    'content-type': contentType,
+    'content-length': Buffer.byteLength(body),
+    'content-disposition': `attachment; filename="${filename}"`
+  });
+  response.end(body);
+}
+
 async function readJson(request) {
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
@@ -104,7 +113,15 @@ export function createApiServer(service) {
         return sendJson(response, 200, { data: service.companionReport() });
       }
       if (method === 'GET' && url.pathname === '/api/v1/yield') {
-        return sendJson(response, 200, { data: service.yieldReport() });
+        const plotId = url.searchParams.get('plotId');
+        return sendJson(response, 200, { data: plotId ? service.yieldByPlot(plotId) : service.yieldReport() });
+      }
+      if (method === 'GET' && url.pathname === '/api/v1/exports/season') {
+        const result = service.exportSeason(url.searchParams.get('format') ?? 'json');
+        if (result.format === 'csv') {
+          return sendDownload(response, result.contentType, result.filename, result.body);
+        }
+        return sendJson(response, 200, result.body);
       }
       if (method === 'GET' && url.pathname === '/api/v1/calendar') {
         return sendJson(response, 200, {
