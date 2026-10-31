@@ -137,3 +137,55 @@ export function validateSeasonImport(input) {
   }
   return { ...manifest, checksum, ...data };
 }
+
+function overlaps(left, right) {
+  return left.plantedOn <= right.expectedHarvestOn && right.plantedOn <= left.expectedHarvestOn;
+}
+
+export function analyzeSeasonImport({ snapshot, plots, crops, plantings }) {
+  const plotById = new Map(plots.map((plot) => [plot.id, plot]));
+  const plotByName = new Map(plots.map((plot) => [plot.name.toLowerCase(), plot]));
+  const cropById = new Map(crops.map((crop) => [crop.id, crop]));
+  const cropByName = new Map(crops.map((crop) => [crop.name.toLowerCase(), crop]));
+  const existingKeys = new Set(plantings.map((row) => `${row.plotId}:${row.cropId}:${row.plantedOn}`));
+  const accepted = [];
+  const skipped = [];
+  const errors = [];
+  for (const row of snapshot.plantings) {
+    const sourcePlot = snapshot.plots.find((plot) => plot.id === row.plotId);
+    const sourceCrop = snapshot.crops.find((crop) => crop.id === row.cropId);
+    const plot = plotById.get(row.plotId)
+      ?? (sourcePlot ? plotByName.get(sourcePlot.name.toLowerCase()) : null);
+    const crop = cropById.get(row.cropId)
+      ?? (sourceCrop ? cropByName.get(sourceCrop.name.toLowerCase()) : null);
+    if (!plot) {
+      errors.push({ plantingId: row.id, reason: 'plot not found by id or name', plotId: row.plotId });
+      continue;
+    }
+    if (!crop) {
+      errors.push({ plantingId: row.id, reason: 'crop not found by id or name', cropId: row.cropId });
+      continue;
+    }
+    const key = `${plot.id}:${crop.id}:${row.plantedOn}`;
+    if (existingKeys.has(key)) {
+      skipped.push({ plantingId: row.id, reason: 'exact planting already exists', plotId: plot.id, cropId: crop.id, plantedOn: row.plantedOn });
+      continue;
+    }
+    const candidate = { ...row, plotId: plot.id, cropId: crop.id, plotName: plot.name, cropName: crop.name };
+    const conflict = [...plantings, ...accepted].find((other) => (
+      other.plotId === plot.id && overlaps(candidate, other)
+    ));
+    if (conflict) {
+      errors.push({
+        plantingId: row.id,
+        reason: 'plot is occupied during the imported date range',
+        plotId: plot.id,
+        conflictPlantingId: conflict.id
+      });
+      continue;
+    }
+    accepted.push(candidate);
+    existingKeys.add(key);
+  }
+  return { ready: accepted, skipped, errors };
+}
