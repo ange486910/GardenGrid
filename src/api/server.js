@@ -1,5 +1,9 @@
 import { createServer as createHttpServer } from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { NotFoundError } from '../domain/validation.js';
+import { readGardenAsset } from '../web/asset-store.js';
+
+const WEB_ROOT = fileURLToPath(new URL('../web/public/', import.meta.url));
 
 function sendJson(response, status, payload) {
   const body = JSON.stringify(payload);
@@ -17,6 +21,21 @@ function sendDownload(response, contentType, filename, body) {
     'content-disposition': `attachment; filename="${filename}"`
   });
   response.end(body);
+}
+
+function sendGardenAsset(request, response, asset) {
+  if (request.headers['if-none-match'] === asset.etag) {
+    response.writeHead(304, { etag: asset.etag });
+    response.end();
+    return;
+  }
+  response.writeHead(200, {
+    'content-type': asset.contentType,
+    'content-length': asset.size,
+    etag: asset.etag,
+    'cache-control': 'no-cache'
+  });
+  response.end(asset.body);
 }
 
 async function readJson(request) {
@@ -39,7 +58,7 @@ function toEnvelope(error) {
   return { status: 500, body: { error: { code: 'internal_error', message: 'Unexpected error' } } };
 }
 
-export function createApiServer(service) {
+export function createApiServer(service, options = {}) {
   return createHttpServer(async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
     const method = request.method;
@@ -134,6 +153,10 @@ export function createApiServer(service) {
           data: service.calendar(url.searchParams.get('from'), url.searchParams.get('to'))
         });
       }
+      if (method === 'GET' && !url.pathname.startsWith('/api/')) {
+        const asset = await readGardenAsset(options.webRoot ?? WEB_ROOT, url.pathname);
+        if (asset) return sendGardenAsset(request, response, asset);
+      }
       throw new NotFoundError('route', url.pathname);
     } catch (error) {
       const envelope = toEnvelope(error);
@@ -143,6 +166,6 @@ export function createApiServer(service) {
 }
 
 export function startServer(service, options = {}) {
-  const server = createApiServer(service);
+  const server = createApiServer(service, options);
   return new Promise((resolve) => server.listen(options.port ?? 0, options.host ?? '127.0.0.1', () => resolve(server)));
 }
