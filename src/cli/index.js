@@ -34,6 +34,7 @@ function parse(argv) {
     else if (token === '--interval-days') options.intervalDays = Number(argv[++index]);
     else if (token === '--file') options.file = argv[++index];
     else if (token === '--format') options.format = argv[++index];
+    else if (token === '--harvest') options.harvest = argv[++index];
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -46,6 +47,11 @@ const help = `GardenGrid CLI
   node src/cli/index.js frost --name <name> --zone <zone> --last-frost YYYY-MM-DD --first-frost YYYY-MM-DD
   node src/cli/index.js window --crop <id> --profile <id> [--database <path>]
   node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
+  node src/cli/index.js harvest-update --harvest <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
+  node src/cli/index.js harvest-delete --harvest <id>
+  node src/cli/index.js harvest-revisions
+  node src/cli/index.js backup --file <json> [--database <path>]
+  node src/cli/index.js restore --file <json> [--database <path>]
   node src/cli/index.js yield [--plot <id>] [--database <path>]
   node src/cli/index.js season-export --file <path> --format <json|csv> [--database <path>]
   node src/cli/index.js season-import --file <json> [--dry-run] [--database <path>]
@@ -92,6 +98,25 @@ if (command === 'migrate') {
     });
     console.log(JSON.stringify({ status: 'ok', harvest }, null, 2));
   } finally { app.close(); }
+} else if (command === 'harvest-update') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', harvest: app.service.correctHarvest(options.harvest, {
+      harvestedOn: options.date,
+      quantity: options.quantity,
+      unit: options.unit
+    }) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'harvest-delete') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', ...app.service.deleteHarvest(options.harvest) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'harvest-revisions') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', revisions: app.service.listHarvestRevisions() }, null, 2));
+  } finally { app.close(); }
 } else if (command === 'yield') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
@@ -116,6 +141,19 @@ if (command === 'migrate') {
     const snapshot = JSON.parse(readFileSync(options.file, 'utf8'));
     const result = app.service.importSeason(snapshot, { dryRun: options.dryRun === true });
     console.log(JSON.stringify({ status: 'ok', ...result }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'backup') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const backup = app.service.exportBackup();
+    writeFileSync(options.file, `${JSON.stringify(backup, null, 2)}\n`, 'utf8');
+    console.log(JSON.stringify({ status: 'ok', file: options.file, checksum: backup.checksum }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'restore') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const backup = JSON.parse(readFileSync(options.file, 'utf8'));
+    console.log(JSON.stringify({ status: 'ok', ...app.service.restoreBackup(backup) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'companions') {
   const app = createApplication({ databasePath: options.databasePath });

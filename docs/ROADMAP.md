@@ -4,9 +4,9 @@
 
 2. **User-defined companion rules:** `COMPANION_RULES` is a hard-coded array. Add a `companion_rules` table with a seed migration and CRUD endpoints; the matcher then takes the table rows instead of the constant.
 
-3. **Harvest correction:** there is no delete or patch endpoint for `harvests`; a mistyped weight requires direct SQL today. Add `PATCH|DELETE /api/v1/harvests/:id` with a `harvest.updated` event.
+3. **Calendar filtering by plot:** `calendarEvents` returns every plot. Add a `plotId` parameter to the domain function and a `--plot` option to the `calendar` CLI command.
 
-4. **Calendar filtering by plot:** `calendarEvents` returns every plot. Add a `plotId` parameter to the domain function and a `--plot` option to the `calendar` CLI command.
+4. **Automatic backup rotation:** manual garden backups are now verified, but no retention scheduler exists. Add daily snapshots and remove old files only after a new restore check succeeds.
 
 5. **Succession plan persistence:** `successionPlan` currently returns calculated dates without creating plantings. Add a reviewed bulk-create command that records the selected rounds and writes their rotation snapshots atomically.
 
