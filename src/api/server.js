@@ -119,6 +119,16 @@ export function createApiServer(service, options = {}) {
       if (method === 'POST' && url.pathname === '/api/v1/harvests') {
         return sendJson(response, 201, { data: service.recordHarvest(await readJson(request)) });
       }
+      const harvestMatch = url.pathname.match(/^\/api\/v1\/harvests\/([^/]+)$/);
+      if (harvestMatch && method === 'PATCH') {
+        return sendJson(response, 200, { data: service.correctHarvest(decodeURIComponent(harvestMatch[1]), await readJson(request)) });
+      }
+      if (harvestMatch && method === 'DELETE') {
+        return sendJson(response, 200, { data: service.deleteHarvest(decodeURIComponent(harvestMatch[1])) });
+      }
+      if (method === 'GET' && url.pathname === '/api/v1/harvest-revisions') {
+        return sendJson(response, 200, { data: service.listHarvestRevisions() });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/rotation-events') {
         return sendJson(response, 200, { data: service.listRotationEvents() });
       }
@@ -147,6 +157,13 @@ export function createApiServer(service, options = {}) {
         return sendJson(response, 200, {
           data: service.importSeason(body.snapshot, { dryRun: body.dryRun === true })
         });
+      }
+      if (method === 'GET' && url.pathname === '/api/v1/backup') {
+        return sendJson(response, 200, { data: service.exportBackup() });
+      }
+      if (method === 'POST' && url.pathname === '/api/v1/restore') {
+        const body = await readJson(request);
+        return sendJson(response, 200, { data: service.restoreBackup(body.backup ?? body) });
       }
       if (method === 'GET' && url.pathname === '/api/v1/calendar') {
         return sendJson(response, 200, {
