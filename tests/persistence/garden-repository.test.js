@@ -10,10 +10,30 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6]);
     assert.deepEqual(migrateDatabase(db), []);
     const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events') ORDER BY name`).all().map((row) => row.name);
     assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events']);
+  } finally { db.close(); }
+});
+
+test('repository updates and deletes harvests while retaining revisions', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    const createdAt = '2026-11-01T08:00:00.000Z';
+    repository.createPlot({ id: 'bed', name: 'Bed', areaSqm: 4, sunExposure: 'full', createdAt });
+    repository.createCrop({ id: 'crop', name: 'Lettuce', family: 'Asteraceae', daysToHarvest: 45, frostHardy: true, createdAt });
+    repository.createPlanting({ id: 'plant', plotId: 'bed', cropId: 'crop', plantedOn: '2026-05-01', expectedHarvestOn: '2026-06-15', status: 'active', createdAt });
+    repository.createHarvest({ id: 'harvest', plantingId: 'plant', harvestedOn: '2026-06-15', quantity: 1, unit: 'kg', createdAt });
+    const updated = repository.updateHarvest({ id: 'harvest', plantingId: 'plant', harvestedOn: '2026-06-16', quantity: 1.5, unit: 'kg' });
+    repository.createHarvestRevision({ id: 'rev1', harvestId: 'harvest', action: 'updated', before: { quantity: 1 }, after: updated, createdAt });
+    assert.equal(repository.findHarvest('harvest').quantity, 1.5);
+    repository.deleteHarvest('harvest');
+    repository.createHarvestRevision({ id: 'rev2', harvestId: 'harvest', action: 'deleted', before: updated, after: null, createdAt });
+    assert.equal(repository.findHarvest('harvest'), null);
+    assert.deepEqual(repository.listHarvestRevisions().map((row) => row.action), ['updated', 'deleted']);
   } finally { db.close(); }
 });
 

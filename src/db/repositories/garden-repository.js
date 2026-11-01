@@ -60,7 +60,12 @@ export class GardenRepository {
       insertFrostProfile: db.prepare('INSERT INTO frost_profiles (id, name, zone, last_frost_date, first_frost_date, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       listHarvests: db.prepare('SELECT * FROM harvests ORDER BY harvested_on ASC, id ASC'),
       listHarvestsByPlanting: db.prepare('SELECT * FROM harvests WHERE planting_id = ? ORDER BY harvested_on ASC, id ASC'),
+      findHarvest: db.prepare('SELECT * FROM harvests WHERE id = ?'),
       insertHarvest: db.prepare('INSERT INTO harvests (id, planting_id, harvested_on, quantity, unit, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+      updateHarvest: db.prepare('UPDATE harvests SET planting_id = ?, harvested_on = ?, quantity = ?, unit = ? WHERE id = ?'),
+      deleteHarvest: db.prepare('DELETE FROM harvests WHERE id = ?'),
+      insertHarvestRevision: db.prepare('INSERT INTO harvest_revisions (id, harvest_id, action, before_json, after_json, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+      listHarvestRevisions: db.prepare('SELECT * FROM harvest_revisions ORDER BY created_at ASC, id ASC'),
       listPlantings: db.prepare('SELECT * FROM plantings ORDER BY planted_on ASC, id ASC'),
       insertPlanting: db.prepare('INSERT INTO plantings (id, plot_id, crop_id, planted_on, expected_harvest_on, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'),
       listRotationEvents: db.prepare('SELECT * FROM rotation_events ORDER BY planted_on DESC, id DESC'),
@@ -95,7 +100,33 @@ export class GardenRepository {
   createFrostProfile(profile) { this.statements.insertFrostProfile.run(profile.id, profile.name, profile.zone, profile.lastFrostDate, profile.firstFrostDate, profile.createdAt); return profile; }
   listHarvests() { return this.statements.listHarvests.all().map(mapHarvest); }
   listHarvestsByPlanting(plantingId) { return this.statements.listHarvestsByPlanting.all(plantingId).map(mapHarvest); }
+  findHarvest(id) { return mapHarvest(this.statements.findHarvest.get(id)); }
   createHarvest(harvest) { this.statements.insertHarvest.run(harvest.id, harvest.plantingId, harvest.harvestedOn, harvest.quantity, harvest.unit, harvest.createdAt); return harvest; }
+  updateHarvest(harvest) {
+    return this.statements.updateHarvest.run(harvest.plantingId, harvest.harvestedOn, harvest.quantity, harvest.unit, harvest.id).changes > 0 ? harvest : null;
+  }
+  deleteHarvest(id) { return this.statements.deleteHarvest.run(id).changes > 0; }
+  createHarvestRevision(revision) {
+    this.statements.insertHarvestRevision.run(
+      revision.id,
+      revision.harvestId,
+      revision.action,
+      JSON.stringify(revision.before),
+      revision.after == null ? null : JSON.stringify(revision.after),
+      revision.createdAt
+    );
+    return revision;
+  }
+  listHarvestRevisions() {
+    return this.statements.listHarvestRevisions.all().map((row) => ({
+      id: row.id,
+      harvestId: row.harvest_id,
+      action: row.action,
+      before: JSON.parse(row.before_json),
+      after: row.after_json == null ? null : JSON.parse(row.after_json),
+      createdAt: row.created_at
+    }));
+  }
   listPlantings() { return this.statements.listPlantings.all().map(mapPlanting); }
   createPlanting(planting) {
     this.statements.insertPlanting.run(
