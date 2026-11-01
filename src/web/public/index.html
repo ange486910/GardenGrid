@@ -45,6 +45,18 @@
             </form>
           </section>
 
+          <section class="harvest-panel" aria-labelledby="harvest-heading">
+            <p class="season">Collect yield</p>
+            <h2 id="harvest-heading">Record harvest</h2>
+            <form data-role="harvest-form">
+              <label>Planting<select name="plantingId" required></select></label>
+              <label>Harvest date<input name="harvestedOn" type="date" required></label>
+              <label>Quantity<input name="quantity" type="number" min="0.01" step="0.01" required></label>
+              <label>Unit<select name="unit" required><option value="kg">kg</option><option value="g">g</option><option value="count">count</option><option value="bunch">bunch</option></select></label>
+              <button type="submit">Record harvest</button>
+            </form>
+          </section>
+
           <section class="warning-panel" aria-labelledby="warning-heading">
             <h2 id="warning-heading">Companion notes</h2>
             <ul data-role="warnings"></ul>

@@ -43,8 +43,8 @@ main { padding-top: 1.2rem; }
 .crop-row span { color: #786a57; font-size: .78rem; }
 .crop-row.flagged strong::after { content: " · review pairing"; color: var(--warn); font-size: .7rem; }
 .side-panel { display: grid; gap: 1rem; align-content: start; }
-.plant-panel, .warning-panel { background: var(--straw); padding: 1.1rem; border-radius: .4rem; }
-.plant-panel form { display: grid; gap: .75rem; }
+.plant-panel, .harvest-panel, .warning-panel { background: var(--straw); padding: 1.1rem; border-radius: .4rem; }
+.plant-panel form, .harvest-panel form { display: grid; gap: .75rem; }
 label { display: grid; gap: .3rem; color: #6b5c49; font-size: .78rem; font-weight: 700; }
 input, select { width: 100%; padding: .65rem .7rem; border: 1px solid #ad9d7d; border-radius: .3rem; background: #fffdf7; color: var(--soil); }
 .warning-panel { background: var(--leaf-light); }

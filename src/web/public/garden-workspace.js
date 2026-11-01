@@ -1,13 +1,17 @@
 import { buildGardenBoard } from './board-model.js';
 import { createGardenApi } from './garden-api.js';
 import { clearAndFill, message } from './garden-dom.js';
+import { createGardenSubmissionGuard, gardenFormValue, gardenQuantity, setGardenFormBusy } from './garden-forms.js';
 
 export async function mountGardenWorkspace(root, options = {}) {
   const api = options.api ?? createGardenApi();
   const plotList = root.querySelector('[data-role="plot-cards"]');
   const warningList = root.querySelector('[data-role="warnings"]');
   const plantForm = root.querySelector('[data-role="plant-form"]');
+  const harvestForm = root.querySelector('[data-role="harvest-form"]');
   const today = options.today ?? new Date().toISOString().slice(0, 10);
+  const submitPlant = createGardenSubmissionGuard();
+  const submitHarvest = createGardenSubmissionGuard();
 
   async function refresh() {
     message(root, 'Reading garden records');
@@ -55,6 +59,11 @@ export async function mountGardenWorkspace(root, options = {}) {
       }
       clearAndFill(plantForm?.querySelector('[name="plotId"]'), plots, plots[0]?.id, (plot) => plot.name);
       clearAndFill(plantForm?.querySelector('[name="cropId"]'), crops, crops[0]?.id, (crop) => crop.name);
+      clearAndFill(harvestForm?.querySelector('[name="plantingId"]'), plantings, plantings[0]?.id, (planting) => {
+        const crop = crops.find((row) => row.id === planting.cropId);
+        const plot = plots.find((row) => row.id === planting.plotId);
+        return `${plot?.name ?? 'Bed'} · ${crop?.name ?? 'Crop'} · ${planting.plantedOn}`;
+      });
       message(root, `Garden updated for ${board.cards.length} beds`);
       return board;
     } catch (error) {
@@ -65,17 +74,53 @@ export async function mountGardenWorkspace(root, options = {}) {
 
   plantForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const value = (name) => plantForm.querySelector(`[name="${name}"]`).value;
-    message(root, 'Planting the selected crop');
-    try {
-      await api.plant({ plotId: value('plotId'), cropId: value('cropId'), plantedOn: value('plantedOn') });
-      await refresh();
-    } catch (error) {
-      message(root, error.message);
-    }
+    await submitPlant(async () => {
+      setGardenFormBusy(plantForm, true);
+      message(root, 'Planting the selected crop');
+      try {
+        await api.plant({
+          plotId: gardenFormValue(plantForm, 'plotId'),
+          cropId: gardenFormValue(plantForm, 'cropId'),
+          plantedOn: gardenFormValue(plantForm, 'plantedOn')
+        });
+        await refresh();
+      } catch (error) {
+        message(root, error.message);
+      } finally {
+        setGardenFormBusy(plantForm, false);
+      }
+    });
+  });
+
+  harvestForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await submitHarvest(async () => {
+      const quantity = gardenQuantity(gardenFormValue(harvestForm, 'quantity'));
+      if (quantity === null) {
+        message(root, 'Harvest quantity must be greater than zero');
+        return;
+      }
+      setGardenFormBusy(harvestForm, true);
+      message(root, 'Recording harvest');
+      try {
+        await api.recordHarvest({
+          plantingId: gardenFormValue(harvestForm, 'plantingId'),
+          harvestedOn: gardenFormValue(harvestForm, 'harvestedOn'),
+          quantity,
+          unit: gardenFormValue(harvestForm, 'unit')
+        });
+        await refresh();
+      } catch (error) {
+        message(root, error.message);
+      } finally {
+        setGardenFormBusy(harvestForm, false);
+      }
+    });
   });
   root.querySelector('[data-role="refresh"]')?.addEventListener('click', () => refresh().catch(() => {}));
   const plantedOn = plantForm?.querySelector('[name="plantedOn"]');
   if (plantedOn && !plantedOn.value) plantedOn.value = today;
+  const harvestedOn = harvestForm?.querySelector('[name="harvestedOn"]');
+  if (harvestedOn && !harvestedOn.value) harvestedOn.value = today;
   return { refresh };
 }
