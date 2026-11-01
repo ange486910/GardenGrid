@@ -1,4 +1,4 @@
-import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, sowingWindow, successionSchedule, yieldSummary } from '../domain/garden.js';
+import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, sowingWindow, successionSchedule, validateHarvestInput, yieldSummary } from '../domain/garden.js';
 import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
@@ -42,6 +42,50 @@ export function createGardenService(repository, dependencies = {}) {
       const planting = repository.listPlantings().find((entry) => entry.id === harvest.plantingId);
       if (!planting) throw new NotFoundError('planting', harvest.plantingId);
       return repository.createHarvest(harvest);
+    },
+
+    listHarvestRevisions() { return repository.listHarvestRevisions(); },
+
+    correctHarvest(id, patch) {
+      const current = repository.findHarvest(id);
+      if (!current) throw new NotFoundError('harvest', id);
+      const next = validateHarvestInput({
+        plantingId: patch?.plantingId ?? current.plantingId,
+        harvestedOn: patch?.harvestedOn ?? current.harvestedOn,
+        quantity: patch?.quantity ?? current.quantity,
+        unit: patch?.unit ?? current.unit
+      });
+      const planting = repository.listPlantings().find((entry) => entry.id === next.plantingId);
+      if (!planting) throw new NotFoundError('planting', next.plantingId);
+      return run(() => {
+        const updated = repository.updateHarvest({ ...current, ...next });
+        repository.createHarvestRevision({
+          id: dependencies.createId?.('harvest_revision') ?? `harvest_revision_${Date.now()}`,
+          harvestId: id,
+          action: 'updated',
+          before: current,
+          after: updated,
+          createdAt: clock.now().toISOString()
+        });
+        return updated;
+      });
+    },
+
+    deleteHarvest(id) {
+      const current = repository.findHarvest(id);
+      if (!current) throw new NotFoundError('harvest', id);
+      return run(() => {
+        repository.deleteHarvest(id);
+        repository.createHarvestRevision({
+          id: dependencies.createId?.('harvest_revision') ?? `harvest_revision_${Date.now()}`,
+          harvestId: id,
+          action: 'deleted',
+          before: current,
+          after: null,
+          createdAt: clock.now().toISOString()
+        });
+        return { id, deleted: true };
+      });
     },
 
     companionReport() {
