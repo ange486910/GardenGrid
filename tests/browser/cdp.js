@@ -1,10 +1,32 @@
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { closeSync, mkdtempSync, openSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const EDGE = process.env.EDGE_PATH ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const LOCK = join(tmpdir(), 'gardengrid-edge-suite.lock');
+
+async function acquireBrowserLock() {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    try {
+      const handle = openSync(LOCK, 'wx');
+      writeFileSync(handle, String(process.pid));
+      closeSync(handle);
+      return () => {
+        try { unlinkSync(LOCK); } catch { /* another worker may have cleaned it */ }
+      };
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      try {
+        if (Date.now() - statSync(LOCK).mtimeMs > 120_000) unlinkSync(LOCK);
+      } catch { /* lock changed while checking */ }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+  throw new Error('browser test lock timed out');
+}
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -31,6 +53,7 @@ async function findTarget(port) {
 }
 
 export async function launchGardenBrowser(url) {
+  const releaseLock = await acquireBrowserLock();
   const port = await freePort();
   const profile = mkdtempSync(join(tmpdir(), 'gardengrid-edge-'));
   const process = spawn(EDGE, [
@@ -91,12 +114,14 @@ export async function launchGardenBrowser(url) {
         process.kill();
         await new Promise((resolve) => setTimeout(resolve, 250));
         try { rmSync(profile, { recursive: true, force: true }); } catch { /* profile lock is released later */ }
+        releaseLock();
       }
     };
   } finally {
     if (!launched) {
       process.kill();
       try { rmSync(profile, { recursive: true, force: true }); } catch { /* profile may still be locked */ }
+      releaseLock();
     }
   }
 }
