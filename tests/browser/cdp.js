@@ -8,7 +8,7 @@ const EDGE = process.env.EDGE_PATH ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\
 const LOCK = join(tmpdir(), 'gardengrid-edge-suite.lock');
 
 async function acquireBrowserLock() {
-  const deadline = Date.now() + 60_000;
+  const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     try {
       const handle = openSync(LOCK, 'wx');
@@ -20,7 +20,7 @@ async function acquireBrowserLock() {
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
       try {
-        if (Date.now() - statSync(LOCK).mtimeMs > 120_000) unlinkSync(LOCK);
+        if (Date.now() - statSync(LOCK).mtimeMs > 20_000) unlinkSync(LOCK);
       } catch { /* lock changed while checking */ }
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
@@ -109,12 +109,17 @@ export async function launchGardenBrowser(url) {
         throw new Error(`browser condition timed out: ${expression}`);
       },
       async close() {
-        try { await send('Browser.close'); } catch { /* socket may close first */ }
+        try {
+          await Promise.race([
+            send('Browser.close'),
+            new Promise((resolve) => setTimeout(resolve, 500))
+          ]);
+        } catch { /* socket may close first */ }
         socket.close();
         process.kill();
+        releaseLock();
         await new Promise((resolve) => setTimeout(resolve, 250));
         try { rmSync(profile, { recursive: true, force: true }); } catch { /* profile lock is released later */ }
-        releaseLock();
       }
     };
   } finally {
