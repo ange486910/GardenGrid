@@ -14,7 +14,7 @@ test('garden board groups plantings by plot and marks companion warnings', () =>
       { id: 'p2', plotId: 'bed_a', cropId: 'basil', plantedOn: '2026-05-03', expectedHarvestOn: '2026-07-01', status: 'planned' }
     ],
     yields: { rows: [{ plotId: 'bed_a', totalQuantity: 2.5, unit: 'kg' }] },
-    companions: { findings: [{ plantingIds: ['p1', 'p2'] }] },
+    companions: { findings: [{ plotId: 'bed_a', crops: ['Tomato', 'Basil'], note: 'Keep apart' }] },
     today: '2026-05-10'
   });
   assert.equal(board.cards[0].plantings.length, 2);

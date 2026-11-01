@@ -3,7 +3,9 @@ import { daysUntil, quantityLabel, shortDate } from './garden-format.js';
 export function buildGardenBoard({ plots, crops, plantings, yields, companions, today }) {
   const cropById = new Map(crops.map((crop) => [crop.id, crop]));
   const yieldByPlot = new Map((yields?.byPlot ?? yields?.rows ?? []).map((row) => [row.plotId, row]));
-  const conflictIds = new Set((companions?.findings ?? []).flatMap((finding) => finding.plantingIds ?? []));
+  const warningPairs = new Set((companions?.findings ?? []).flatMap((finding) => (
+    (finding.crops ?? []).map((cropName) => `${finding.plotId}:${cropName.toLowerCase()}`)
+  )));
   const cards = plots.map((plot) => {
     const rows = plantings
       .filter((planting) => planting.plotId === plot.id)
@@ -16,7 +18,7 @@ export function buildGardenBoard({ plots, crops, plantings, yields, companions, 
           plantedLabel: shortDate(planting.plantedOn),
           harvestLabel: shortDate(planting.expectedHarvestOn),
           daysToHarvest: daysUntil(planting.expectedHarvestOn, today),
-          hasCompanionWarning: conflictIds.has(planting.id)
+          hasCompanionWarning: warningPairs.has(`${plot.id}:${(crop?.name ?? '').toLowerCase()}`)
         };
       })
       .sort((left, right) => left.expectedHarvestOn.localeCompare(right.expectedHarvestOn));
