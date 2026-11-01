@@ -33,6 +33,7 @@ export async function mountGardenWorkspace(root, options = {}) {
           for (const planting of plot.plantings) {
             const row = root.ownerDocument.createElement('li');
             row.className = planting.hasCompanionWarning ? 'crop-row flagged' : 'crop-row';
+            row.dataset.status = planting.status;
             row.replaceChildren();
             const name = root.ownerDocument.createElement('strong');
             name.textContent = planting.cropName;

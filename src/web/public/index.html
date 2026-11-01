@@ -10,6 +10,7 @@
 <body>
   <a class="skip-link" href="#garden-main">Skip to garden board</a>
   <div class="page" data-workspace="garden">
+    <p class="connection" data-role="connection" role="status" hidden></p>
     <header class="masthead">
       <div>
         <p class="season">Season planning</p>
@@ -29,7 +30,7 @@
       <div class="board-layout">
         <section class="beds" aria-labelledby="beds-heading">
           <h2 id="beds-heading">Beds and borders</h2>
-          <div class="bed-grid" data-role="plot-cards"></div>
+          <div class="bed-grid" data-role="plot-cards" aria-live="polite"></div>
         </section>
 
         <aside class="side-panel">

@@ -32,6 +32,7 @@ node src/cli/index.js season-export --file data/season.json --format json
 node src/cli/index.js season-import --file data/season.json --dry-run
 node src/cli/index.js season-import --file data/season.json
 node src/cli/index.js serve
+# open http://127.0.0.1:4312/ for the bed board
 ```
 
 ## API
@@ -51,6 +52,12 @@ node src/cli/index.js serve
 - `GET /api/v1/rotation-report?asOf=YYYY-MM-DD`
 - `GET /api/v1/frost-profiles/:id/succession/:cropId?count=4&intervalDays=14`
 - `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
+
+## Browser workspace
+
+The served bed board groups active and planned crops by plot, shows harvest dates and yield totals,
+and highlights companion findings. Planting uses the same API contract as the CLI. Static files
+carry ETags, and the page includes live status text, keyboard focus styling and offline messaging.
 
 ## License
 
