@@ -59,6 +59,10 @@ The served bed board groups active and planned crops by plot, shows harvest date
 and highlights companion findings. Planting uses the same API contract as the CLI. Static files
 carry ETags, and the page includes live status text, keyboard focus styling and offline messaging.
 
+Planting and harvest forms reject invalid quantities, block duplicate submissions and re-enable
+controls after API conflicts. Beds use roving arrow-key focus. Edge headless tests cover planting,
+rotation conflict recovery, harvest capture, keyboard movement and repeated submissions.
+
 ## License
 
 MIT

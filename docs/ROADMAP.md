@@ -10,4 +10,4 @@
 
 5. **Succession plan persistence:** `successionPlan` currently returns calculated dates without creating plantings. Add a reviewed bulk-create command that records the selected rounds and writes their rotation snapshots atomically.
 
-6. **Keyboard bed navigation:** the board is readable in document order, but plot cards do not support arrow-key movement. Add roving tab stops between beds and expose harvest details through the same focus model.
+6. **Bed order editing:** beds remain ordered by name. Add drag or keyboard ordering that persists a user-defined sequence without weakening the current roving-focus behavior.

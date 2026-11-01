@@ -10,6 +10,7 @@
 - D7 adds plot-level yield projection and checksummed season exports.
 - D8 validates season-package checksums, previews plot/crop matching, and imports plantings with harvests atomically.
 - D9 adds a plot-first browser board with planting controls, companion warnings and cache-validated assets.
+- D10 adds guarded planting/harvest forms, bed keyboard navigation and Edge flows for success, conflicts and duplicate submissions.
 
 ## Milestones
 
