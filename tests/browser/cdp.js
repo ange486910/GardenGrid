@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { closeSync, mkdtempSync, openSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -6,6 +6,14 @@ import { join } from 'node:path';
 
 const EDGE = process.env.EDGE_PATH ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const LOCK = join(tmpdir(), 'gardengrid-edge-suite.lock');
+
+function terminateBrowser(child) {
+  if (process.platform === 'win32' && child.pid) {
+    spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+  } else {
+    child.kill('SIGKILL');
+  }
+}
 
 async function acquireBrowserLock() {
   const deadline = Date.now() + 30_000;
@@ -66,8 +74,9 @@ export async function launchGardenBrowser(url) {
     const page = await findTarget(port);
     const socket = new WebSocket(page.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
-      socket.addEventListener('open', resolve, { once: true });
-      socket.addEventListener('error', reject, { once: true });
+      const timer = setTimeout(() => reject(new Error('browser socket open timed out')), 5000);
+      socket.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
+      socket.addEventListener('error', (error) => { clearTimeout(timer); reject(error); }, { once: true });
     });
     let nextId = 0;
     const pending = new Map();
@@ -77,12 +86,17 @@ export async function launchGardenBrowser(url) {
       const item = pending.get(message.id);
       if (!item) return;
       pending.delete(message.id);
+      clearTimeout(item.timer);
       if (message.error) item.reject(new Error(message.error.message));
       else item.resolve(message.result);
     });
     const send = (method, params = {}) => new Promise((resolve, reject) => {
       const id = ++nextId;
-      pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error(`CDP command timed out: ${method}`));
+      }, 5000);
+      pending.set(id, { resolve, reject, timer });
       socket.send(JSON.stringify({ id, method, params }));
     });
     const evaluate = async (expression) => {
@@ -116,7 +130,7 @@ export async function launchGardenBrowser(url) {
           ]);
         } catch { /* socket may close first */ }
         socket.close();
-        process.kill();
+        terminateBrowser(process);
         releaseLock();
         await new Promise((resolve) => setTimeout(resolve, 250));
         try { rmSync(profile, { recursive: true, force: true }); } catch { /* profile lock is released later */ }
@@ -124,7 +138,7 @@ export async function launchGardenBrowser(url) {
     };
   } finally {
     if (!launched) {
-      process.kill();
+      terminateBrowser(process);
       try { rmSync(profile, { recursive: true, force: true }); } catch { /* profile may still be locked */ }
       releaseLock();
     }
