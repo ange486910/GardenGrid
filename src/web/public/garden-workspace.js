@@ -2,6 +2,7 @@ import { buildGardenBoard } from './board-model.js';
 import { createGardenApi } from './garden-api.js';
 import { clearAndFill, message } from './garden-dom.js';
 import { createGardenSubmissionGuard, gardenFormValue, gardenQuantity, setGardenFormBusy } from './garden-forms.js';
+import { installBedNavigation, prepareBedCards } from './garden-navigation.js';
 
 export async function mountGardenWorkspace(root, options = {}) {
   const api = options.api ?? createGardenApi();
@@ -49,6 +50,7 @@ export async function mountGardenWorkspace(root, options = {}) {
           article.append(heading, meta, list);
           return article;
         }));
+        prepareBedCards([...plotList.querySelectorAll('article')]);
       }
       if (warningList) {
         warningList.replaceChildren(...(companions.findings ?? []).map((finding) => {
@@ -118,6 +120,7 @@ export async function mountGardenWorkspace(root, options = {}) {
     });
   });
   root.querySelector('[data-role="refresh"]')?.addEventListener('click', () => refresh().catch(() => {}));
+  installBedNavigation(plotList, (text) => message(root, text));
   const plantedOn = plantForm?.querySelector('[name="plantedOn"]');
   if (plantedOn && !plantedOn.value) plantedOn.value = today;
   const harvestedOn = harvestForm?.querySelector('[name="harvestedOn"]');
