@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -12,6 +12,7 @@ test('CLI applies a reviewed season resolution with a preview token', () => {
   const targetDatabase = join(directory, 'target.sqlite');
   const snapshotPath = join(directory, 'season.json');
   const resolutionPath = join(directory, 'resolutions.json');
+  const templatePath = join(directory, 'template.json');
   try {
     const source = createApplication({ databasePath: sourceDatabase });
     const sourcePlot = source.service.createPlot({ name: 'Bed A', areaSqm: 6 });
@@ -28,6 +29,14 @@ test('CLI applies a reviewed season resolution with a preview token', () => {
     const targetKale = target.service.createCrop({ name: 'Kale', family: 'Brassicaceae', daysToHarvest: 1, frostHardy: true });
     target.service.plant({ plotId: targetPlot.id, cropId: targetKale.id, plantedOn: '2026-06-01' });
     target.close();
+
+    const template = spawnSync(process.execPath, [
+      'src/cli/index.js', 'season-resolution-template', '--database', targetDatabase,
+      '--file', snapshotPath, '--out', templatePath
+    ], { cwd: process.cwd(), encoding: 'utf8' });
+    assert.equal(template.status, 0, template.stderr);
+    assert.equal(JSON.parse(template.stdout).conflictCount, 1);
+    assert.equal(JSON.parse(readFileSync(templatePath, 'utf8')).resolutions[0].action, 'skip');
 
     const resolutions = {
       format: 'gardengrid-season-resolutions', version: 1, snapshotChecksum: snapshot.checksum,

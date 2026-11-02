@@ -36,6 +36,7 @@ function parse(argv) {
     else if (token === '--file') options.file = argv[++index];
     else if (token === '--resolution-file') options.resolutionFile = argv[++index];
     else if (token === '--preview-token') options.previewToken = argv[++index];
+    else if (token === '--out') options.out = argv[++index];
     else if (token === '--format') options.format = argv[++index];
     else if (token === '--harvest') options.harvest = argv[++index];
     else if (token === '--rule') options.rule = argv[++index];
@@ -64,6 +65,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js restore --file <json> [--database <path>]
   node src/cli/index.js yield [--plot <id>] [--database <path>]
   node src/cli/index.js season-export --file <path> --format <json|csv> [--database <path>]
+  node src/cli/index.js season-resolution-template --file <json> --out <json> [--database <path>]
   node src/cli/index.js season-import --file <json> [--dry-run] [--resolution-file <json>] [--preview-token <token>] [--database <path>]
   node src/cli/index.js companions [--database <path>]
   node src/cli/index.js companion-rules [--database <path>]
@@ -151,6 +153,14 @@ if (command === 'migrate') {
     console.log(JSON.stringify({
       status: 'ok', file: options.file, format: result.format, checksum: result.checksum
     }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'season-resolution-template') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const snapshot = JSON.parse(readFileSync(options.file, 'utf8'));
+    const template = app.service.seasonResolutionTemplate(snapshot);
+    writeFileSync(options.out, `${JSON.stringify(template, null, 2)}\n`, 'utf8');
+    console.log(JSON.stringify({ status: 'ok', file: options.out, conflictCount: template.conflictCount }, null, 2));
   } finally { app.close(); }
 } else if (command === 'season-import') {
   const app = createApplication({ databasePath: options.databasePath });

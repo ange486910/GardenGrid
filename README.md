@@ -39,7 +39,8 @@ node src/cli/index.js crop-status --crop <id> --crop-action archive
 node src/cli/index.js succession --crop <id> --profile <id> --count 3 --interval-days 14
 node src/cli/index.js yield --plot <plot-id>
 node src/cli/index.js season-export --file data/season.json --format json
-node src/cli/index.js season-import --file data/season.json --dry-run
+node src/cli/index.js season-resolution-template --file data/season.json --out data/resolutions.json
+node src/cli/index.js season-import --file data/season.json --dry-run --resolution-file data/resolutions.json
 node src/cli/index.js season-import --file data/season.json
 node src/cli/index.js backup --file data/garden-backup.json
 node src/cli/index.js restore --file data/garden-backup.json --database data/restored.sqlite

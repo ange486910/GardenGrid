@@ -4,7 +4,7 @@ import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js'
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-planting.js';
 import { createRestPeriod, findRestConflict, summarizeRestPeriods } from '../domain/rest-period.js';
-import { applySeasonResolutions, seasonImportPreviewToken } from '../domain/season-import-resolution.js';
+import { applySeasonResolutions, seasonImportPreviewToken, suggestSeasonResolutions } from '../domain/season-import-resolution.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
 import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
@@ -176,6 +176,20 @@ export function createGardenService(repository, dependencies = {}) {
         filename: 'gardengrid-season.json',
         checksum: exportData.checksum,
         body: { ...exportData.manifest, checksum: exportData.checksum, ...exportData.data }
+      };
+    },
+
+    seasonResolutionTemplate(input) {
+      const snapshot = validateSeasonImport(input);
+      const analysis = analyzeSeasonImport({
+        snapshot,
+        plots: repository.listPlots(),
+        crops: repository.listCrops(),
+        plantings: repository.listPlantings()
+      });
+      return {
+        ...suggestSeasonResolutions({ snapshot, errors: analysis.errors }),
+        conflictCount: analysis.errors.length
       };
     },
 

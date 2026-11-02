@@ -48,6 +48,21 @@ export function applySeasonResolutions(snapshot, resolutionFile) {
   return { ...snapshot, plantings };
 }
 
+export function suggestSeasonResolutions({ snapshot, errors }) {
+  const seen = new Set();
+  const resolutions = [];
+  for (const error of errors) {
+    if (!error.plantingId || seen.has(error.plantingId)) continue;
+    seen.add(error.plantingId);
+    resolutions.push({ plantingId: error.plantingId, action: 'skip' });
+  }
+  return {
+    format: SEASON_RESOLUTION_FORMAT,
+    version: SEASON_RESOLUTION_VERSION,
+    snapshotChecksum: snapshot.checksum,
+    resolutions
+  };
+}
 export function seasonImportPreviewToken({ snapshot, resolutionFile = null, errors }) {
   return createHash('sha256').update(JSON.stringify({
     snapshotChecksum: snapshot.checksum,

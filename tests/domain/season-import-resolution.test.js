@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applySeasonResolutions, seasonImportPreviewToken, validateSeasonResolutions } from '../../src/domain/season-import-resolution.js';
+import { applySeasonResolutions, seasonImportPreviewToken, suggestSeasonResolutions, validateSeasonResolutions } from '../../src/domain/season-import-resolution.js';
 
 const snapshot = {
   checksum: 'abc',
@@ -36,4 +36,20 @@ test('preview tokens change with snapshot, resolution and conflicts', () => {
   const second = seasonImportPreviewToken({ snapshot, resolutionFile: resolution, errors: [{ plantingId: 'p1', reason: 'changed' }] });
   assert.match(first, /^[a-f0-9]{64}$/);
   assert.notEqual(first, second);
+});
+
+test('conflict templates suggest one skip action per planting', () => {
+  const template = suggestSeasonResolutions({
+    snapshot,
+    errors: [
+      { plantingId: 'p1', reason: 'occupied' },
+      { plantingId: 'p1', reason: 'duplicate conflict' },
+      { plantingId: 'p2', reason: 'occupied' }
+    ]
+  });
+  assert.equal(template.snapshotChecksum, snapshot.checksum);
+  assert.deepEqual(template.resolutions, [
+    { plantingId: 'p1', action: 'skip' },
+    { plantingId: 'p2', action: 'skip' }
+  ]);
 });
