@@ -12,6 +12,7 @@
 - D9 adds a plot-first browser board with planting controls, companion warnings and cache-validated assets.
 - D10 adds guarded planting/harvest forms, bed keyboard navigation and Edge flows for success, conflicts and duplicate submissions.
 - D11 adds checksummed garden backup/restore and harvest edit/delete revisions with rollback checks.
+- D12 adds plot-filtered calendars, persistent companion-rule CRUD and crop archive/restore.
 
 ## Milestones
 

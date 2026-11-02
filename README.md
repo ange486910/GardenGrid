@@ -14,6 +14,7 @@ calendar. It runs on Node.js 24 with no third-party runtime dependencies and use
 - Crop-specific sowing offsets and succession-round plans.
 - Plot-level yield projections and checksummed season-plan exports.
 - Checksummed garden backups, transaction-safe restore and harvest correction history.
+- User-defined companion rules, plot-filtered calendars and crop archive state.
 
 ## Run
 
@@ -25,10 +26,13 @@ node src/cli/index.js harvest --planting <id> --date 2026-10-20 --quantity 2.5 -
 node src/cli/index.js harvest-update --harvest <id> --date 2026-10-21 --quantity 2.8 --unit kg
 node src/cli/index.js harvest-revisions
 node src/cli/index.js companions
+node src/cli/index.js companion-rule-add --crop-a tomato --crop-b basil --type companion --note "Grow together"
+node src/cli/index.js companion-rules
 node src/cli/index.js yield
 node src/cli/index.js rotation-record --plot <id> --crop <id> --date 2024-05-01 --ended 2024-08-01
 node src/cli/index.js rotation-report --as-of 2026-10-30
 node src/cli/index.js crop --name Cilantro --family Apiaceae --days 50 --frost-hardy true --earliest-weeks -2 --latest-weeks 2
+node src/cli/index.js crop-status --crop <id> --crop-action archive
 node src/cli/index.js succession --crop <id> --profile <id> --count 3 --interval-days 14
 node src/cli/index.js yield --plot <plot-id>
 node src/cli/index.js season-export --file data/season.json --format json
@@ -57,6 +61,10 @@ node src/cli/index.js serve
 - `GET /api/v1/rotation-report?asOf=YYYY-MM-DD`
 - `GET /api/v1/frost-profiles/:id/succession/:cropId?count=4&intervalDays=14`
 - `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD&plotId=<id>`
+- `GET|POST /api/v1/companion-rules`
+- `PATCH|DELETE /api/v1/companion-rules/:id`
+- `POST /api/v1/crops/:id/archive|restore`
 - `PATCH|DELETE /api/v1/harvests/:id`
 - `GET /api/v1/harvest-revisions`
 - `GET /api/v1/backup`
@@ -75,6 +83,9 @@ rotation conflict recovery, harvest capture, keyboard movement and repeated subm
 Harvest edits and deletes retain before/after revision records. Full garden backups preserve plots,
 crops, planting windows, harvests, frost profiles and rotation snapshots; restore rejects non-empty
 databases and rolls back if foreign keys or row counts do not match.
+
+Calendar requests can be narrowed to one bed. Companion guidance can be overridden through persisted
+rule pairs, and archived crops remain visible in historical plantings while new plantings are blocked.
 
 ## License
 

@@ -40,6 +40,7 @@ function parse(argv) {
     else if (token === '--crop-b') options.cropB = argv[++index];
     else if (token === '--type') options.type = argv[++index];
     else if (token === '--note') options.note = argv[++index];
+    else if (token === '--crop-action') options.cropAction = argv[++index];
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -67,6 +68,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
   node src/cli/index.js crop --name <name> --family <family> --days <n> --frost-hardy <true|false>
+  node src/cli/index.js crop-status --crop <id> --crop-action <archive|restore>
   node src/cli/index.js succession --crop <id> --profile <id> --count <n> --interval-days <n>
   node src/cli/index.js serve [--port <port>] [--database <path>]
 `;
@@ -211,6 +213,12 @@ if (command === 'migrate') {
       earliestSowWeeks: Number.isNaN(options.earliestWeeks) ? null : options.earliestWeeks,
       latestSowWeeks: Number.isNaN(options.latestWeeks) ? null : options.latestWeeks
     });
+    console.log(JSON.stringify({ status: 'ok', crop }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'crop-status') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const crop = options.cropAction === 'archive' ? app.service.archiveCrop(options.crop) : app.service.restoreCrop(options.crop);
     console.log(JSON.stringify({ status: 'ok', crop }, null, 2));
   } finally { app.close(); }
 } else if (command === 'succession') {

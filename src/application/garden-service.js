@@ -34,6 +34,18 @@ export function createGardenService(repository, dependencies = {}) {
     createFrostProfile(input) { return repository.createFrostProfile(createFrostProfile(input, dependencies)); },
     listCrops() { return repository.listCrops(); },
     createCrop(input) { return repository.createCrop(createCrop(input, dependencies)); },
+    archiveCrop(id) {
+      const crop = requireCrop(id);
+      if (crop.archivedAt) throw new ConflictError('crop is already archived', { cropId: id });
+      repository.setCropArchived(id, clock.now().toISOString());
+      return repository.findCrop(id);
+    },
+    restoreCrop(id) {
+      const crop = requireCrop(id);
+      if (!crop.archivedAt) throw new ConflictError('crop is not archived', { cropId: id });
+      repository.setCropArchived(id, null);
+      return repository.findCrop(id);
+    },
     listPlantings() { return repository.listPlantings(); },
     listHarvests() { return repository.listHarvests(); },
     listRotationEvents() { return repository.listRotationEvents(); },
@@ -282,6 +294,7 @@ export function createGardenService(repository, dependencies = {}) {
     plant(input) {
       const plot = requirePlot(input?.plotId);
       const crop = requireCrop(input?.cropId);
+      if (crop.archivedAt) throw new ConflictError('archived crops cannot be planted', { cropId: crop.id, archivedAt: crop.archivedAt });
       const plantedOn = requireDate(input?.plantedOn, 'plantedOn');
       const conflict = hasRecentFamilyConflict({
         crop,

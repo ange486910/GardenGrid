@@ -78,6 +78,14 @@ export function createApiServer(service, options = {}) {
       if (method === 'POST' && url.pathname === '/api/v1/crops') {
         return sendJson(response, 201, { data: service.createCrop(await readJson(request)) });
       }
+      const cropArchiveMatch = url.pathname.match(/^\/api\/v1\/crops\/([^/]+)\/(archive|restore)$/);
+      if (cropArchiveMatch && method === 'POST') {
+        const cropId = decodeURIComponent(cropArchiveMatch[1]);
+        const action = cropArchiveMatch[2];
+        return sendJson(response, 200, {
+          data: action === 'archive' ? service.archiveCrop(cropId) : service.restoreCrop(cropId)
+        });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/frost-profiles') {
         return sendJson(response, 200, { data: service.listFrostProfiles() });
       }
