@@ -16,6 +16,7 @@ function seed(app) {
   const planting = app.service.plant({ plotId: plot.id, cropId: crop.id, plantedOn: '2026-05-01' });
   app.service.recordHarvest({ plantingId: planting.id, harvestedOn: '2026-07-10', quantity: 2.5, unit: 'kg' });
   app.service.createFrostProfile({ name: 'Zone 5', zone: '5a', lastFrostDate: '2026-05-15', firstFrostDate: '2026-10-01' });
+  app.service.recordRestPeriod({ plotId: plot.id, kind: 'fallow', startedOn: '2026-08-01', endedOn: '2026-09-01', note: 'summer rest' });
 }
 
 test('garden backup restores plots, plantings, harvests and rotation snapshots', () => {
@@ -26,9 +27,11 @@ test('garden backup restores plots, plantings, harvests and rotation snapshots',
     const backup = source.service.exportBackup();
     const result = target.service.restoreBackup(backup);
     assert.equal(result.restored.plantings, 1);
+    assert.equal(result.restored.restPeriods, 1);
     assert.equal(target.service.listHarvests().length, 1);
     assert.equal(target.service.listRotationEvents().length, 1);
     assert.equal(target.service.listFrostProfiles().length, 1);
+    assert.equal(target.service.listRestPeriods()[0].kind, 'fallow');
   } finally { source.close(); target.close(); }
 });
 

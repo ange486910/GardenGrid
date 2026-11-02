@@ -15,6 +15,7 @@ calendar. It runs on Node.js 24 with no third-party runtime dependencies and use
 - Plot-level yield projections and checksummed season-plan exports.
 - Checksummed garden backups, transaction-safe restore and harvest correction history.
 - User-defined companion rules, plot-filtered calendars and crop archive state.
+- Explicit fallow and cover-crop periods that reserve bed dates without creating rotation conflicts.
 
 ## Run
 
@@ -31,6 +32,8 @@ node src/cli/index.js companion-rules
 node src/cli/index.js yield
 node src/cli/index.js rotation-record --plot <id> --crop <id> --date 2024-05-01 --ended 2024-08-01
 node src/cli/index.js rotation-report --as-of 2026-10-30
+node src/cli/index.js rest-add --plot <id> --kind fallow --date 2026-08-01 --ended 2026-08-31
+node src/cli/index.js rest-list --plot <id>
 node src/cli/index.js crop --name Cilantro --family Apiaceae --days 50 --frost-hardy true --earliest-weeks -2 --latest-weeks 2
 node src/cli/index.js crop-status --crop <id> --crop-action archive
 node src/cli/index.js succession --crop <id> --profile <id> --count 3 --interval-days 14
@@ -58,6 +61,7 @@ node src/cli/index.js serve
 - `GET /api/v1/exports/season?format=json|csv`
 - `POST /api/v1/imports/season` with a season snapshot and optional `dryRun`
 - `GET|POST /api/v1/rotation-events`
+- `GET|POST /api/v1/rest-periods`
 - `GET /api/v1/rotation-report?asOf=YYYY-MM-DD`
 - `GET /api/v1/frost-profiles/:id/succession/:cropId?count=4&intervalDays=14`
 - `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`
@@ -80,7 +84,7 @@ Planting and harvest forms reject invalid quantities, block duplicate submission
 controls after API conflicts. Beds use roving arrow-key focus. Edge headless tests cover planting,
 rotation conflict recovery, harvest capture, keyboard movement and repeated submissions.
 
-Harvest edits and deletes retain before/after revision records. Full garden backups preserve plots,
+Harvest edits and deletes retain before/after revision records. Full garden backups preserve plots, rest and cover-crop periods,
 crops, planting windows, harvests, frost profiles and rotation snapshots; restore rejects non-empty
 databases and rolls back if foreign keys or row counts do not match.
 

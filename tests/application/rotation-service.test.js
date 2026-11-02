@@ -34,10 +34,13 @@ test('imported rotation history affects planting and appears in the report', () 
     const tomato = app.service.createCrop({ name: 'Tomato', family: 'Solanaceae', daysToHarvest: 70, frostHardy: false });
     const lettuce = app.service.createCrop({ name: 'Lettuce', family: 'Asteraceae', daysToHarvest: 45, frostHardy: true });
     app.service.recordRotation({ plotId: plot.id, cropId: tomato.id, plantedOn: '2024-05-01', endedOn: '2024-08-01' });
+    app.service.recordRestPeriod({ plotId: plot.id, kind: 'fallow', startedOn: '2026-08-01', endedOn: '2026-08-31' });
 
     const report = app.service.rotationReport('2026-10-30');
     assert.deepEqual(report.plots[0].blockedFamilies, ['Solanaceae']);
     assert.deepEqual(report.plots[0].availableFamilies, ['Asteraceae']);
+    assert.equal(report.plots[0].rest.totalDays, 31);
+    assert.equal(report.plots[0].rest.periods[0].kind, 'fallow');
     assert.throws(
       () => app.service.plant({ plotId: plot.id, cropId: tomato.id, plantedOn: '2026-05-01' }),
       (error) => error.name === 'ConflictError'

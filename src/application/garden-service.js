@@ -3,7 +3,7 @@ import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-planting.js';
-import { createRestPeriod, findRestConflict } from '../domain/rest-period.js';
+import { createRestPeriod, findRestConflict, summarizeRestPeriods } from '../domain/rest-period.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
 import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
@@ -247,7 +247,8 @@ export function createGardenService(repository, dependencies = {}) {
           frostProfiles: repository.listFrostProfiles(),
           plantings: repository.listPlantings(),
           harvests: repository.listHarvests(),
-          rotationEvents: repository.listRotationEvents()
+          rotationEvents: repository.listRotationEvents(),
+          restPeriods: repository.listRestPeriods()
         }
       });
     },
@@ -259,7 +260,8 @@ export function createGardenService(repository, dependencies = {}) {
         || repository.listPlantings().length > 0
         || repository.listHarvests().length > 0
         || repository.listFrostProfiles().length > 0
-        || repository.listRotationEvents().length > 0;
+        || repository.listRotationEvents().length > 0
+        || repository.listRestPeriods().length > 0;
       if (occupied) throw new ConflictError('restore requires an empty garden database');
       return run(() => {
         for (const plot of backup.data.plots) repository.createPlot(plot);
@@ -268,6 +270,7 @@ export function createGardenService(repository, dependencies = {}) {
         for (const planting of backup.data.plantings) repository.createPlanting(planting);
         for (const harvest of backup.data.harvests) repository.createHarvest(harvest);
         for (const event of backup.data.rotationEvents) repository.createRotationEvent(event);
+        for (const period of backup.data.restPeriods) repository.createRestPeriod(period);
         const foreignKeyErrors = repository.db.prepare('PRAGMA foreign_key_check').all();
         if (foreignKeyErrors.length > 0) throw new ConflictError('restored garden violates foreign keys', { foreignKeyErrors });
         const actual = {
@@ -276,7 +279,8 @@ export function createGardenService(repository, dependencies = {}) {
           frostProfiles: repository.listFrostProfiles().length,
           plantings: repository.listPlantings().length,
           harvests: repository.listHarvests().length,
-          rotationEvents: repository.listRotationEvents().length
+          rotationEvents: repository.listRotationEvents().length,
+          restPeriods: repository.listRestPeriods().length
         };
         if (JSON.stringify(actual) !== JSON.stringify(backup.counts)) throw new ConflictError('restored row counts do not match', { expected: backup.counts, actual });
         return { restored: backup.counts, checksum: backup.checksum };
@@ -414,12 +418,24 @@ export function createGardenService(repository, dependencies = {}) {
     },
 
     rotationReport(asOf) {
-      return rotationReport({
+      const report = rotationReport({
         plots: repository.listPlots(),
         crops: repository.listCrops(),
         events: repository.listRotationEvents(),
         asOf: requireDate(asOf, 'asOf')
       });
+      return {
+        ...report,
+        plots: report.plots.map((row) => ({
+          ...row,
+          rest: summarizeRestPeriods({
+            periods: repository.listRestPeriodsByPlot(row.plotId),
+            plotId: row.plotId,
+            from: report.windowStart,
+            to: report.asOf
+          })
+        }))
+      };
     },
 
     calendar(from, to, plotId = null) {
