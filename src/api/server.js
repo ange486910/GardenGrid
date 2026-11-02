@@ -115,6 +115,9 @@ export function createApiServer(service, options = {}) {
         });
       }
 
+      if (method === 'POST' && url.pathname === '/api/v1/plantings/succession') {
+        return sendJson(response, 201, { data: service.createSuccession(await readJson(request)) });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/plantings') {
         return sendJson(response, 200, { data: service.listPlantings() });
       }
