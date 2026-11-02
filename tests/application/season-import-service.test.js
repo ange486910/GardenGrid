@@ -64,3 +64,71 @@ test('a failed rotation snapshot rolls back the whole season import', () => {
     target.close();
   }
 });
+
+function conflictingImportFixture(prefix) {
+  const source = fixture(`${prefix}_source`);
+  const target = fixture(`${prefix}_target`);
+  seed(source);
+  const plot = target.service.createPlot({ name: 'Bed A', areaSqm: 6 });
+  const tomato = target.service.createCrop({ name: 'Tomato', family: 'Solanaceae', daysToHarvest: 70, frostHardy: false });
+  const kale = target.service.createCrop({ name: 'Kale', family: 'Brassicaceae', daysToHarvest: 1, frostHardy: true });
+  target.service.plant({ plotId: plot.id, cropId: kale.id, plantedOn: '2026-06-01' });
+  return { source, target, plot, tomato, snapshot: source.service.exportSeason('json').body };
+}
+
+test('reviewed season substitutions apply atomically after a fresh preview', () => {
+  const f = conflictingImportFixture('resolve');
+  try {
+    const preview = f.target.service.importSeason(f.snapshot, { dryRun: true });
+    assert.equal(preview.errors.length, 1);
+    assert.equal(f.target.service.listPlantings().length, 1);
+    const sourcePlanting = f.snapshot.plantings[0];
+    const resolutions = {
+      format: 'gardengrid-season-resolutions',
+      version: 1,
+      snapshotChecksum: f.snapshot.checksum,
+      resolutions: [{
+        plantingId: sourcePlanting.id,
+        action: 'replace',
+        plotId: f.plot.id,
+        cropId: f.tomato.id,
+        plantedOn: '2026-06-03',
+        expectedHarvestOn: '2026-07-10'
+      }]
+    };
+    const reviewed = f.target.service.importSeason(f.snapshot, { dryRun: true, resolutions });
+    assert.equal(reviewed.errors.length, 0);
+    assert.match(reviewed.previewToken, /^[a-f0-9]{64}$/);
+    const result = f.target.service.importSeason(f.snapshot, { resolutions, previewToken: reviewed.previewToken });
+    assert.equal(result.imported.plantings, 1);
+    assert.equal(f.target.service.listPlantings().length, 2);
+  } finally { f.source.close(); f.target.close(); }
+});
+
+test('stale resolution previews cannot apply after the target bed changes', () => {
+  const f = conflictingImportFixture('stale');
+  try {
+    const sourcePlanting = f.snapshot.plantings[0];
+    const resolutions = {
+      format: 'gardengrid-season-resolutions',
+      version: 1,
+      snapshotChecksum: f.snapshot.checksum,
+      resolutions: [{
+        plantingId: sourcePlanting.id,
+        action: 'replace',
+        plotId: f.plot.id,
+        cropId: f.tomato.id,
+        plantedOn: '2026-06-03',
+        expectedHarvestOn: '2026-07-10'
+      }]
+    };
+    const preview = f.target.service.importSeason(f.snapshot, { dryRun: true, resolutions });
+    assert.equal(preview.errors.length, 0);
+    const lettuce = f.target.service.createCrop({ name: 'Lettuce', family: 'Asteraceae', daysToHarvest: 40, frostHardy: true });
+    f.target.service.plant({ plotId: f.plot.id, cropId: lettuce.id, plantedOn: '2026-07-01' });
+    assert.throws(
+      () => f.target.service.importSeason(f.snapshot, { resolutions, previewToken: preview.previewToken }),
+      (error) => error.name === 'ConflictError' && error.details.field === 'previewToken'
+    );
+  } finally { f.source.close(); f.target.close(); }
+});

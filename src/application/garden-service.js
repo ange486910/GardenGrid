@@ -4,6 +4,7 @@ import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js'
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-planting.js';
 import { createRestPeriod, findRestConflict, summarizeRestPeriods } from '../domain/rest-period.js';
+import { applySeasonResolutions, seasonImportPreviewToken } from '../domain/season-import-resolution.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
 import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
@@ -179,12 +180,20 @@ export function createGardenService(repository, dependencies = {}) {
     },
 
     importSeason(input, options = {}) {
-      const snapshot = validateSeasonImport(input);
+      const original = validateSeasonImport(input);
+      const snapshot = options.resolutions
+        ? applySeasonResolutions(original, options.resolutions)
+        : original;
       const analysis = analyzeSeasonImport({
         snapshot,
         plots: repository.listPlots(),
         crops: repository.listCrops(),
         plantings: repository.listPlantings()
+      });
+      const previewToken = seasonImportPreviewToken({
+        snapshot: original,
+        resolutionFile: options.resolutions ?? null,
+        errors: analysis.errors
       });
       if (options.dryRun === true) {
         return {
@@ -194,8 +203,19 @@ export function createGardenService(repository, dependencies = {}) {
           errors: analysis.errors,
           harvestsEligible: snapshot.harvests.filter((harvest) => (
             analysis.ready.some((planting) => planting.id === harvest.plantingId)
-          )).length
+          )).length,
+          previewToken,
+          appliedResolutions: options.resolutions?.resolutions.length ?? 0
         };
+      }
+      if (options.resolutions && options.previewToken !== previewToken) {
+        throw new ConflictError('season import preview is stale or missing', { field: 'previewToken' });
+      }
+      if (analysis.errors.length > 0) {
+        throw new ConflictError('season import still has unresolved conflicts', {
+          errors: analysis.errors,
+          previewToken
+        });
       }
       const imported = run(() => {
         const plantingMap = new Map();
