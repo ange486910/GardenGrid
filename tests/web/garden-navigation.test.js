@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gardenBedIndex, prepareBedCards } from '../../src/web/public/garden-navigation.js';
+import { gardenBedIndex, moveBedOrder, prepareBedCards } from '../../src/web/public/garden-navigation.js';
 
 test('bed navigation wraps direction at the board edges', () => {
   assert.equal(gardenBedIndex(0, 3, 'ArrowRight'), 1);
@@ -15,4 +15,11 @@ test('only the first bed enters the tab order', () => {
   const cards = [{ setAttribute() {} }, { setAttribute() {} }, { setAttribute() {} }];
   prepareBedCards(cards);
   assert.deepEqual(cards.map((card) => card.tabIndex), [0, -1, -1]);
+});
+
+test('keyboard bed reordering swaps adjacent ids without losing a bed', () => {
+  assert.deepEqual(moveBedOrder(['a', 'b', 'c'], 1, 'ArrowUp'), ['b', 'a', 'c']);
+  assert.deepEqual(moveBedOrder(['a', 'b', 'c'], 1, 'ArrowDown'), ['a', 'c', 'b']);
+  assert.deepEqual(moveBedOrder(['a', 'b', 'c'], 0, 'ArrowLeft'), ['a', 'b', 'c']);
+  assert.deepEqual(moveBedOrder(['a', 'b', 'c'], 2, 'ArrowRight'), ['a', 'b', 'c']);
 });

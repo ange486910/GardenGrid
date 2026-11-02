@@ -17,6 +17,7 @@ export function prepareBedCards(cards) {
 export function installBedNavigation(container, announce) {
   if (!container) return;
   container.addEventListener('keydown', (event) => {
+    if (event.altKey) return;
     if (!['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
     const cards = [...container.querySelectorAll('article')];
     const current = cards.indexOf(event.target.closest('article'));
@@ -27,4 +28,13 @@ export function installBedNavigation(container, announce) {
     cards[next]?.focus();
     announce?.(`Bed ${next + 1} of ${cards.length}`);
   });
+}
+export function moveBedOrder(ids, current, key) {
+  if (!Number.isInteger(current) || current < 0 || current >= ids.length) return [...ids];
+  const offset = key === 'ArrowLeft' || key === 'ArrowUp' ? -1 : key === 'ArrowRight' || key === 'ArrowDown' ? 1 : 0;
+  const next = Math.max(0, Math.min(ids.length - 1, current + offset));
+  if (next === current) return [...ids];
+  const reordered = [...ids];
+  [reordered[current], reordered[next]] = [reordered[next], reordered[current]];
+  return reordered;
 }

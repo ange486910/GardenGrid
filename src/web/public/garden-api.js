@@ -28,6 +28,7 @@ export function createGardenApi(fetchImpl = globalThis.fetch) {
 
   return {
     plots: () => request('/api/v1/plots'),
+    reorderPlots: (plotIds) => request('/api/v1/plots/order', { method: 'PATCH', body: { plotIds } }),
     crops: () => request('/api/v1/crops'),
     plantings: () => request('/api/v1/plantings'),
     harvests: () => request('/api/v1/harvests'),

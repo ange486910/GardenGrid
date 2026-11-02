@@ -14,8 +14,11 @@ test('garden API client shapes plot queries and tree posts', async () => {
   });
   await api.yields('bed a');
   await api.plant({ plotId: 'bed_a', cropId: 'tomato', plantedOn: '2026-05-01' });
+  await api.reorderPlots(['bed_b', 'bed_a']);
   assert.equal(calls[0].path, '/api/v1/yield?plotId=bed%20a');
   assert.equal(JSON.parse(calls[1].options.body).cropId, 'tomato');
+  assert.equal(calls[2].path, '/api/v1/plots/order');
+  assert.deepEqual(JSON.parse(calls[2].options.body).plotIds, ['bed_b', 'bed_a']);
 });
 
 test('garden API client preserves server conflict details', async () => {

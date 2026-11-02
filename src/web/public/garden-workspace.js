@@ -2,7 +2,7 @@ import { buildGardenBoard } from './board-model.js';
 import { createGardenApi } from './garden-api.js';
 import { clearAndFill, message } from './garden-dom.js';
 import { createGardenSubmissionGuard, gardenFormValue, gardenQuantity, setGardenFormBusy } from './garden-forms.js';
-import { installBedNavigation, prepareBedCards } from './garden-navigation.js';
+import { installBedNavigation, moveBedOrder, prepareBedCards } from './garden-navigation.js';
 
 export async function mountGardenWorkspace(root, options = {}) {
   const api = options.api ?? createGardenApi();
@@ -29,6 +29,7 @@ export async function mountGardenWorkspace(root, options = {}) {
         plotList.replaceChildren(...board.cards.map((plot) => {
           const article = root.ownerDocument.createElement('article');
           article.className = plot.warningCount > 0 ? 'bed-card warning' : 'bed-card';
+          article.dataset.plotId = plot.id;
           const heading = root.ownerDocument.createElement('h3');
           heading.textContent = plot.plotName ?? plot.name;
           const meta = root.ownerDocument.createElement('p');
@@ -120,6 +121,25 @@ export async function mountGardenWorkspace(root, options = {}) {
     });
   });
   root.querySelector('[data-role="refresh"]')?.addEventListener('click', () => refresh().catch(() => {}));
+  plotList?.addEventListener('keydown', async (event) => {
+    if (!event.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    const cards = [...plotList.querySelectorAll('article[data-plot-id]')];
+    const current = cards.indexOf(event.target.closest('article'));
+    if (current < 0) return;
+    const ids = moveBedOrder(cards.map((card) => card.dataset.plotId), current, event.key);
+    const next = ids.indexOf(cards[current].dataset.plotId);
+    if (next === current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      await api.reorderPlots(ids);
+      await refresh();
+      plotList.querySelectorAll('article[data-plot-id]')[next]?.focus();
+      message(root, `Moved ${cards[current].querySelector('h3')?.textContent ?? 'bed'}`);
+    } catch (error) {
+      message(root, error.message);
+    }
+  });
   installBedNavigation(plotList, (text) => message(root, text));
   const plantedOn = plantForm?.querySelector('[name="plantedOn"]');
   if (plantedOn && !plantedOn.value) plantedOn.value = today;
