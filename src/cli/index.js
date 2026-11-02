@@ -32,6 +32,7 @@ function parse(argv) {
     else if (token === '--latest-weeks') options.latestWeeks = Number(argv[++index]);
     else if (token === '--count') options.count = Number(argv[++index]);
     else if (token === '--interval-days') options.intervalDays = Number(argv[++index]);
+    else if (token === '--rounds') options.rounds = argv[++index];
     else if (token === '--file') options.file = argv[++index];
     else if (token === '--format') options.format = argv[++index];
     else if (token === '--harvest') options.harvest = argv[++index];
@@ -70,6 +71,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js crop --name <name> --family <family> --days <n> --frost-hardy <true|false>
   node src/cli/index.js crop-status --crop <id> --crop-action <archive|restore>
   node src/cli/index.js succession --crop <id> --profile <id> --count <n> --interval-days <n>
+  node src/cli/index.js succession-create --plot <id> --crop <id> --profile <id> --count <n> --interval-days <n> [--rounds 1,2]
   node src/cli/index.js serve [--port <port>] [--database <path>]
 `;
 
@@ -226,6 +228,22 @@ if (command === 'migrate') {
   try {
     const plan = app.service.successionPlan(options.crop, options.profile, options.count, options.intervalDays);
     console.log(JSON.stringify({ status: 'ok', plan }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'succession-create') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const selectedRounds = options.rounds == null
+      ? undefined
+      : options.rounds.split(',').map((value) => Number(value.trim()));
+    const result = app.service.createSuccession({
+      plotId: options.plot,
+      cropId: options.crop,
+      profileId: options.profile,
+      count: options.count,
+      intervalDays: options.intervalDays,
+      selectedRounds
+    });
+    console.log(JSON.stringify({ status: 'ok', ...result }, null, 2));
   } finally { app.close(); }
 } else if (command === 'serve') {
   const app = createApplication({ databasePath: options.databasePath });

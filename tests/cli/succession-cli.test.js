@@ -9,8 +9,10 @@ import { createApplication } from '../../src/application/create-application.js';
 test('CLI creates an offset crop and prints a succession plan', () => {
   const directory = mkdtempSync(join(tmpdir(), 'gardengrid-succession-cli-'));
   const database = join(directory, 'garden.sqlite');
+  let plot;
   try {
     const app = createApplication({ databasePath: database });
+    plot = app.service.createPlot({ name: 'Bed A', areaSqm: 8 });
     const profile = app.service.createFrostProfile({
       name: 'Zone 5', zone: '5a', lastFrostDate: '2026-05-15', firstFrostDate: '2026-10-01'
     });
@@ -18,7 +20,7 @@ test('CLI creates an offset crop and prints a succession plan', () => {
 
     const created = spawnSync(process.execPath, [
       'src/cli/index.js', 'crop', '--database', database, '--name', 'Cilantro', '--family', 'Apiaceae',
-      '--days', '50', '--frost-hardy', 'true', '--earliest-weeks', '-2', '--latest-weeks', '2'
+      '--days', '10', '--frost-hardy', 'true', '--earliest-weeks', '-2', '--latest-weeks', '2'
     ], { cwd: process.cwd(), encoding: 'utf8' });
     assert.equal(created.status, 0, created.stderr);
     const crop = JSON.parse(created.stdout).crop;
@@ -30,6 +32,14 @@ test('CLI creates an offset crop and prints a succession plan', () => {
     ], { cwd: process.cwd(), encoding: 'utf8' });
     assert.equal(planned.status, 0, planned.stderr);
     assert.deepEqual(JSON.parse(planned.stdout).plan.rounds.map((round) => round.sowOn), ['2026-05-01', '2026-05-15', '2026-05-29']);
+
+    const persisted = spawnSync(process.execPath, [
+      'src/cli/index.js', 'succession-create', '--database', database,
+      '--plot', plot.id, '--crop', crop.id, '--profile', profile.id,
+      '--count', '3', '--interval-days', '14', '--rounds', '1,3'
+    ], { cwd: process.cwd(), encoding: 'utf8' });
+    assert.equal(persisted.status, 0, persisted.stderr);
+    assert.deepEqual(JSON.parse(persisted.stdout).plantings.map((row) => row.plantedOn), ['2026-05-01', '2026-05-29']);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
