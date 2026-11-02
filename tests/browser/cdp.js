@@ -16,7 +16,7 @@ function terminateBrowser(child) {
 }
 
 async function acquireBrowserLock() {
-  const deadline = Date.now() + 30_000;
+  const deadline = Date.now() + 5_000;
   while (Date.now() < deadline) {
     try {
       const handle = openSync(LOCK, 'wx');
@@ -28,7 +28,7 @@ async function acquireBrowserLock() {
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
       try {
-        if (Date.now() - statSync(LOCK).mtimeMs > 20_000) unlinkSync(LOCK);
+        if (Date.now() - statSync(LOCK).mtimeMs > 5_000) unlinkSync(LOCK);
       } catch { /* lock changed while checking */ }
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
