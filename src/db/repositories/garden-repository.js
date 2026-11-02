@@ -1,6 +1,6 @@
 function mapPlot(row) {
   if (!row) return null;
-  return { id: row.id, name: row.name, areaSqm: Number(row.area_sqm), sunExposure: row.sun_exposure, createdAt: row.created_at };
+  return { id: row.id, name: row.name, areaSqm: Number(row.area_sqm), sunExposure: row.sun_exposure, displayOrder: Number(row.display_order ?? 0), createdAt: row.created_at };
 }
 function mapCrop(row) {
   if (!row) return null;
@@ -79,7 +79,8 @@ export class GardenRepository {
   constructor(db) {
     this.db = db;
     this.statements = {
-      listPlots: db.prepare('SELECT * FROM plots ORDER BY name ASC, id ASC'),
+      listPlots: db.prepare('SELECT * FROM plots ORDER BY display_order ASC, name ASC, id ASC'),
+      updatePlotOrder: db.prepare('UPDATE plots SET display_order = ? WHERE id = ?'),
       findPlot: db.prepare('SELECT * FROM plots WHERE id = ?'),
       insertPlot: db.prepare('INSERT INTO plots (id, name, area_sqm, sun_exposure, created_at) VALUES (?, ?, ?, ?, ?)'),
       listCrops: db.prepare('SELECT * FROM crops ORDER BY name ASC, id ASC'),
@@ -129,6 +130,7 @@ export class GardenRepository {
 
   listPlots() { return this.statements.listPlots.all().map(mapPlot); }
   findPlot(id) { return mapPlot(this.statements.findPlot.get(id)); }
+  updatePlotOrder(plotId, displayOrder) { return this.statements.updatePlotOrder.run(displayOrder, plotId).changes > 0; }
   createPlot(plot) { this.statements.insertPlot.run(plot.id, plot.name, plot.areaSqm, plot.sunExposure, plot.createdAt); return plot; }
   listCrops() { return this.statements.listCrops.all().map(mapCrop); }
   findCrop(id) { return mapCrop(this.statements.findCrop.get(id)); }

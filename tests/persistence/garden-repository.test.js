@@ -10,7 +10,7 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     assert.deepEqual(migrateDatabase(db), []);
     const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events','succession_batches','rest_periods') ORDER BY name`).all().map((row) => row.name);
     assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rest_periods', 'rotation_events', 'succession_batches']);
@@ -143,5 +143,20 @@ test('repository persists fallow and cover-crop rest periods', () => {
     repository.createRestPeriod({ id: 'rest2', plotId: 'bed', kind: 'fallow', cropId: null, startedOn: '2026-08-01', endedOn: '2026-09-01', note: 'hot bed rest', createdAt });
     assert.deepEqual(repository.listRestPeriodsByPlot('bed').map((row) => row.kind), ['cover_crop', 'fallow']);
     assert.equal(repository.findRestPeriod('rest2').cropId, null);
+  } finally { db.close(); }
+});
+
+test('repository stores a deterministic bed display order', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    const createdAt = '2026-11-03T08:00:00.000Z';
+    repository.createPlot({ id: 'a', name: 'Bed A', areaSqm: 4, sunExposure: 'full', createdAt });
+    repository.createPlot({ id: 'b', name: 'Bed B', areaSqm: 4, sunExposure: 'full', createdAt });
+    repository.updatePlotOrder('a', 2);
+    repository.updatePlotOrder('b', 1);
+    assert.deepEqual(repository.listPlots().map((row) => row.id), ['b', 'a']);
+    assert.deepEqual(repository.listPlots().map((row) => row.displayOrder), [1, 2]);
   } finally { db.close(); }
 });
