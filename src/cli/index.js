@@ -35,6 +35,11 @@ function parse(argv) {
     else if (token === '--file') options.file = argv[++index];
     else if (token === '--format') options.format = argv[++index];
     else if (token === '--harvest') options.harvest = argv[++index];
+    else if (token === '--rule') options.rule = argv[++index];
+    else if (token === '--crop-a') options.cropA = argv[++index];
+    else if (token === '--crop-b') options.cropB = argv[++index];
+    else if (token === '--type') options.type = argv[++index];
+    else if (token === '--note') options.note = argv[++index];
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -56,6 +61,9 @@ const help = `GardenGrid CLI
   node src/cli/index.js season-export --file <path> --format <json|csv> [--database <path>]
   node src/cli/index.js season-import --file <json> [--dry-run] [--database <path>]
   node src/cli/index.js companions [--database <path>]
+  node src/cli/index.js companion-rules [--database <path>]
+  node src/cli/index.js companion-rule-add --crop-a <name> --crop-b <name> --type <companion|antagonist> --note <text>
+  node src/cli/index.js companion-rule-delete --rule <id>
   node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
   node src/cli/index.js crop --name <name> --family <family> --days <n> --frost-hardy <true|false>
@@ -159,6 +167,22 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', ...app.service.companionReport() }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'companion-rules') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', rules: app.service.listCompanionRules() }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'companion-rule-add') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const rule = app.service.createCompanionRule({ pair: [options.cropA, options.cropB], type: options.type, note: options.note });
+    console.log(JSON.stringify({ status: 'ok', rule }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'companion-rule-delete') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', ...app.service.deleteCompanionRule(options.rule) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'rotation-record') {
   const app = createApplication({ databasePath: options.databasePath });
