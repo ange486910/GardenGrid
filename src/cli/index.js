@@ -46,6 +46,7 @@ function parse(argv) {
     else if (token === '--note') options.note = argv[++index];
     else if (token === '--crop-action') options.cropAction = argv[++index];
     else if (token === '--kind') options.kind = argv[++index];
+    else if (token === '--ids') options.ids = argv[++index];
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -74,6 +75,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
   node src/cli/index.js rest-add --plot <id> --kind <fallow|cover_crop> --date YYYY-MM-DD --ended YYYY-MM-DD [--crop <id>] [--note <text>]
   node src/cli/index.js rest-list [--plot <id>]
+  node src/cli/index.js plot-reorder --ids <id1,id2,...>
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
   node src/cli/index.js crop --name <name> --family <family> --days <n> --frost-hardy <true|false>
   node src/cli/index.js crop-status --crop <id> --crop-action <archive|restore>
@@ -209,6 +211,12 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', ...app.service.deleteCompanionRule(options.rule) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'plot-reorder') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const plotIds = options.ids?.split(',').map((value) => value.trim()).filter(Boolean) ?? [];
+    console.log(JSON.stringify({ status: 'ok', plots: app.service.reorderPlots(plotIds) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'rest-add') {
   const app = createApplication({ databasePath: options.databasePath });
