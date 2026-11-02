@@ -1,5 +1,6 @@
 import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPlanting, createPlot, sowingWindow, successionSchedule, validateHarvestInput, yieldSummary } from '../domain/garden.js';
 import { findCompanionIssues } from '../domain/companion-matcher.js';
+import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
@@ -89,7 +90,31 @@ export function createGardenService(repository, dependencies = {}) {
     },
 
     companionReport() {
-      return { findings: findCompanionIssues({ plantings: repository.listPlantings(), crops: repository.listCrops(), plots: repository.listPlots() }) };
+      const rules = repository.listCompanionRules();
+      return { findings: findCompanionIssues({ plantings: repository.listPlantings(), crops: repository.listCrops(), plots: repository.listPlots(), rules: rules.length ? rules : COMPANION_RULES }) };
+    },
+
+    listCompanionRules() { return repository.listCompanionRules(); },
+
+    createCompanionRule(input) {
+      const id = input?.id ?? dependencies.createId?.('companion_rule') ?? `companion_rule_${Date.now()}`;
+      const rule = validateCompanionRule({ ...input, id });
+      const duplicate = repository.listCompanionRules().some((entry) => entry.pair.join(':') === rule.pair.join(':'));
+      if (duplicate) throw new ConflictError('companion rule already exists for this crop pair', { pair: rule.pair });
+      return repository.createCompanionRule({ ...rule, createdAt: clock.now().toISOString() });
+    },
+
+    updateCompanionRule(id, patch) {
+      const current = repository.findCompanionRule(id);
+      if (!current) throw new NotFoundError('companion rule', id);
+      const next = validateCompanionRule({ ...current, ...patch, id, pair: current.pair });
+      repository.updateCompanionRule(id, next);
+      return { ...current, ...next };
+    },
+
+    deleteCompanionRule(id) {
+      if (!repository.deleteCompanionRule(id)) throw new NotFoundError('companion rule', id);
+      return { id, deleted: true };
     },
 
     yieldReport() {

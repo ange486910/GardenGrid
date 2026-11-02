@@ -141,6 +141,19 @@ export function createApiServer(service, options = {}) {
       if (method === 'GET' && url.pathname === '/api/v1/companions') {
         return sendJson(response, 200, { data: service.companionReport() });
       }
+      if (method === 'GET' && url.pathname === '/api/v1/companion-rules') {
+        return sendJson(response, 200, { data: service.listCompanionRules() });
+      }
+      if (method === 'POST' && url.pathname === '/api/v1/companion-rules') {
+        return sendJson(response, 201, { data: service.createCompanionRule(await readJson(request)) });
+      }
+      const companionRuleMatch = url.pathname.match(/^\/api\/v1\/companion-rules\/([^/]+)$/);
+      if (companionRuleMatch && method === 'PATCH') {
+        return sendJson(response, 200, { data: service.updateCompanionRule(decodeURIComponent(companionRuleMatch[1]), await readJson(request)) });
+      }
+      if (companionRuleMatch && method === 'DELETE') {
+        return sendJson(response, 200, { data: service.deleteCompanionRule(decodeURIComponent(companionRuleMatch[1])) });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/yield') {
         const plotId = url.searchParams.get('plotId');
         return sendJson(response, 200, { data: plotId ? service.yieldByPlot(plotId) : service.yieldReport() });
