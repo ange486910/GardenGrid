@@ -3,6 +3,7 @@ import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-planting.js';
+import { createRestPeriod, findRestConflict } from '../domain/rest-period.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
 import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
@@ -50,6 +51,7 @@ export function createGardenService(repository, dependencies = {}) {
     listPlantings() { return repository.listPlantings(); },
     listHarvests() { return repository.listHarvests(); },
     listRotationEvents() { return repository.listRotationEvents(); },
+    listRestPeriods(plotId) { return plotId ? repository.listRestPeriodsByPlot(plotId) : repository.listRestPeriods(); },
     listSuccessionBatches() { return repository.listSuccessionBatches(); },
 
     recordHarvest(input) {
@@ -362,12 +364,36 @@ export function createGardenService(repository, dependencies = {}) {
         plantedOn
       });
       if (conflict) throw new ConflictError(`rotation conflict: ${crop.family} was planted in ${plot.name} within three years`, { plotId: plot.id, cropId: crop.id, family: crop.family });
+      const plantingDraft = createPlanting({ ...input, plotId: plot.id }, crop, dependencies);
+      const restConflict = findRestConflict({
+        candidate: { plotId: plot.id, startedOn: plantingDraft.plantedOn, endedOn: plantingDraft.expectedHarvestOn },
+        restPeriods: repository.listRestPeriods(),
+        plantings: []
+      });
+      if (restConflict) throw new ConflictError('planting overlaps a bed rest period', { ...restConflict, plotId: plot.id });
       return run(() => {
-        const planting = repository.createPlanting(createPlanting({ ...input, plotId: plot.id }, crop, dependencies));
+        const planting = repository.createPlanting(plantingDraft);
         const event = createRotationEvent({ plotId: plot.id, cropId: crop.id, plantedOn: planting.plantedOn }, crop, dependencies);
         repository.createRotationEvent(event);
         return planting;
       });
+    },
+
+    recordRestPeriod(input = {}) {
+      const plot = requirePlot(input.plotId);
+      let crop = null;
+      if (input.cropId) {
+        crop = requireCrop(input.cropId);
+        if (crop.archivedAt) throw new ConflictError('archived crops cannot start a cover-crop period', { cropId: crop.id });
+      }
+      const period = createRestPeriod({ ...input, plotId: plot.id, cropId: crop?.id ?? null }, dependencies);
+      const conflict = findRestConflict({
+        candidate: period,
+        restPeriods: repository.listRestPeriods(),
+        plantings: repository.listPlantings()
+      });
+      if (conflict) throw new ConflictError('rest period overlaps an existing bed commitment', { ...conflict, plotId: plot.id });
+      return run(() => repository.createRestPeriod(period));
     },
 
     recordRotation(input) {
