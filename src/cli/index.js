@@ -74,7 +74,7 @@ if (command === 'migrate') {
 } else if (command === 'calendar') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
-    console.log(JSON.stringify({ status: 'ok', events: app.service.calendar(options.from, options.to) }, null, 2));
+    console.log(JSON.stringify({ status: 'ok', events: app.service.calendar(options.from, options.to, options.plot) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'frost') {
   const app = createApplication({ databasePath: options.databasePath });

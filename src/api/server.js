@@ -167,7 +167,7 @@ export function createApiServer(service, options = {}) {
       }
       if (method === 'GET' && url.pathname === '/api/v1/calendar') {
         return sendJson(response, 200, {
-          data: service.calendar(url.searchParams.get('from'), url.searchParams.get('to'))
+          data: service.calendar(url.searchParams.get('from'), url.searchParams.get('to'), url.searchParams.get('plotId') ?? null)
         });
       }
       if (method === 'GET' && !url.pathname.startsWith('/api/')) {

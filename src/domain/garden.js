@@ -85,11 +85,12 @@ export function createPlanting(input, crop, dependencies = {}) {
   };
 }
 
-export function calendarEvents({ plantings, crops, plots, from, to }) {
+export function calendarEvents({ plantings, crops, plots, from, to, plotId = null }) {
   const cropById = new Map(crops.map((crop) => [crop.id, crop]));
   const plotById = new Map(plots.map((plot) => [plot.id, plot]));
   const events = [];
   for (const planting of plantings) {
+    if (plotId && planting.plotId !== plotId) continue;
     const crop = cropById.get(planting.cropId);
     const plot = plotById.get(planting.plotId);
     if (!crop || !plot) continue;

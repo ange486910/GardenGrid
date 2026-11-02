@@ -299,11 +299,12 @@ export function createGardenService(repository, dependencies = {}) {
       });
     },
 
-    calendar(from, to) {
+    calendar(from, to, plotId = null) {
       const start = requireDate(from, 'from');
       const end = requireDate(to, 'to');
+      if (plotId) requirePlot(plotId);
       if (end < start) throw new ConflictError('to must not precede from', { from: start, to: end });
-      return calendarEvents({ plantings: repository.listPlantings(), crops: repository.listCrops(), plots: repository.listPlots(), from: start, to: end });
+      return calendarEvents({ plantings: repository.listPlantings(), crops: repository.listCrops(), plots: repository.listPlots(), from: start, to: end, plotId });
     }
   };
 }
