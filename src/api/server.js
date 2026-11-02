@@ -72,6 +72,10 @@ export function createApiServer(service, options = {}) {
       if (method === 'POST' && url.pathname === '/api/v1/plots') {
         return sendJson(response, 201, { data: service.createPlot(await readJson(request)) });
       }
+      if (method === 'PATCH' && url.pathname === '/api/v1/plots/order') {
+        const body = await readJson(request);
+        return sendJson(response, 200, { data: service.reorderPlots(body.plotIds) });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/rest-periods') {
         return sendJson(response, 200, { data: service.listRestPeriods(url.searchParams.get('plotId') ?? undefined) });
       }

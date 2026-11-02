@@ -4,6 +4,7 @@ import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js'
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-planting.js';
 import { createRestPeriod, findRestConflict, summarizeRestPeriods } from '../domain/rest-period.js';
+import { normalizePlotOrder } from '../domain/plot-order.js';
 import { applySeasonResolutions, seasonImportPreviewToken, suggestSeasonResolutions } from '../domain/season-import-resolution.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
@@ -32,6 +33,14 @@ export function createGardenService(repository, dependencies = {}) {
 
   return {
     listPlots() { return repository.listPlots(); },
+
+    reorderPlots(plotIds) {
+      const order = normalizePlotOrder(plotIds, repository.listPlots());
+      return run(() => {
+        for (const row of order) repository.updatePlotOrder(row.id, row.displayOrder);
+        return repository.listPlots();
+      });
+    },
     createPlot(input) { return repository.createPlot(createPlot(input, dependencies)); },
     listFrostProfiles() { return repository.listFrostProfiles(); },
     createFrostProfile(input) { return repository.createFrostProfile(createFrostProfile(input, dependencies)); },
