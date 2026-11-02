@@ -47,6 +47,19 @@ function mapCompanionRule(row) {
   if (!row) return null;
   return { id: row.id, pair: [row.crop_a, row.crop_b], type: row.type, note: row.note, createdAt: row.created_at };
 }
+function mapRestPeriod(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    plotId: row.plot_id,
+    kind: row.kind,
+    cropId: row.crop_id,
+    startedOn: row.started_on,
+    endedOn: row.ended_on,
+    note: row.note,
+    createdAt: row.created_at
+  };
+}
 function mapSuccessionBatch(row) {
   if (!row) return null;
   return {
@@ -96,6 +109,12 @@ export class GardenRepository {
         + 'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       ),
       listCompanionRules: db.prepare('SELECT * FROM companion_rules ORDER BY crop_a ASC, crop_b ASC'),
+      listRestPeriods: db.prepare('SELECT * FROM rest_periods ORDER BY started_on ASC, id ASC'),
+      listRestPeriodsByPlot: db.prepare('SELECT * FROM rest_periods WHERE plot_id = ? ORDER BY started_on ASC, id ASC'),
+      findRestPeriod: db.prepare('SELECT * FROM rest_periods WHERE id = ?'),
+      insertRestPeriod: db.prepare(
+        'INSERT INTO rest_periods (id, plot_id, kind, crop_id, started_on, ended_on, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ),
       findCompanionRule: db.prepare('SELECT * FROM companion_rules WHERE id = ?'),
       insertCompanionRule: db.prepare('INSERT INTO companion_rules (id, crop_a, crop_b, type, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       updateCompanionRule: db.prepare('UPDATE companion_rules SET type = ?, note = ? WHERE id = ?'),
@@ -189,6 +208,22 @@ export class GardenRepository {
     return event;
   }
   listCompanionRules() { return this.statements.listCompanionRules.all().map(mapCompanionRule); }
+  listRestPeriods() { return this.statements.listRestPeriods.all().map(mapRestPeriod); }
+  listRestPeriodsByPlot(plotId) { return this.statements.listRestPeriodsByPlot.all(plotId).map(mapRestPeriod); }
+  findRestPeriod(id) { return mapRestPeriod(this.statements.findRestPeriod.get(id)); }
+  createRestPeriod(period) {
+    this.statements.insertRestPeriod.run(
+      period.id,
+      period.plotId,
+      period.kind,
+      period.cropId,
+      period.startedOn,
+      period.endedOn,
+      period.note,
+      period.createdAt
+    );
+    return period;
+  }
   findCompanionRule(id) { return mapCompanionRule(this.statements.findCompanionRule.get(id)); }
   createCompanionRule(rule) {
     this.statements.insertCompanionRule.run(rule.id, rule.pair[0], rule.pair[1], rule.type, rule.note, rule.createdAt);
@@ -215,4 +250,4 @@ export class GardenRepository {
   }
 }
 
-export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent, mapCompanionRule, mapSuccessionBatch };
+export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent, mapCompanionRule, mapSuccessionBatch, mapRestPeriod };

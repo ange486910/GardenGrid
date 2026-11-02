@@ -10,10 +10,10 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     assert.deepEqual(migrateDatabase(db), []);
-    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events','succession_batches') ORDER BY name`).all().map((row) => row.name);
-    assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events', 'succession_batches']);
+    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events','succession_batches','rest_periods') ORDER BY name`).all().map((row) => row.name);
+    assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rest_periods', 'rotation_events', 'succession_batches']);
   } finally { db.close(); }
 });
 
@@ -128,5 +128,20 @@ test('foreign keys reject plantings without a plot', () => {
     migrateDatabase(db);
     const repository = new GardenRepository(db);
     assert.throws(() => repository.createPlanting({ id: 'p1', plotId: 'missing', cropId: 'missing', plantedOn: '2026-10-01', expectedHarvestOn: '2026-11-15', status: 'planned', createdAt: '2026-10-28T08:00:00.000Z' }));
+  } finally { db.close(); }
+});
+
+test('repository persists fallow and cover-crop rest periods', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    const createdAt = '2026-11-03T08:00:00.000Z';
+    repository.createPlot({ id: 'bed', name: 'Bed A', areaSqm: 6, sunExposure: 'full', createdAt });
+    repository.createCrop({ id: 'clover', name: 'Clover', family: 'Fabaceae', daysToHarvest: 60, frostHardy: true, earliestSowWeeks: null, latestSowWeeks: null, createdAt });
+    repository.createRestPeriod({ id: 'rest1', plotId: 'bed', kind: 'cover_crop', cropId: 'clover', startedOn: '2026-06-01', endedOn: '2026-07-01', note: 'summer cover', createdAt });
+    repository.createRestPeriod({ id: 'rest2', plotId: 'bed', kind: 'fallow', cropId: null, startedOn: '2026-08-01', endedOn: '2026-09-01', note: 'hot bed rest', createdAt });
+    assert.deepEqual(repository.listRestPeriodsByPlot('bed').map((row) => row.kind), ['cover_crop', 'fallow']);
+    assert.equal(repository.findRestPeriod('rest2').cropId, null);
   } finally { db.close(); }
 });
