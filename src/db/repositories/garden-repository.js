@@ -42,6 +42,11 @@ function mapRotationEvent(row) {
   };
 }
 
+function mapCompanionRule(row) {
+  if (!row) return null;
+  return { id: row.id, pair: [row.crop_a, row.crop_b], type: row.type, note: row.note, createdAt: row.created_at };
+}
+
 export class GardenRepository {
   constructor(db) {
     this.db = db;
@@ -73,7 +78,12 @@ export class GardenRepository {
       insertRotationEvent: db.prepare(
         'INSERT INTO rotation_events (id, plot_id, crop_id, family, crop_name, planted_on, ended_on, created_at) '
         + 'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      )
+      ),
+      listCompanionRules: db.prepare('SELECT * FROM companion_rules ORDER BY crop_a ASC, crop_b ASC'),
+      findCompanionRule: db.prepare('SELECT * FROM companion_rules WHERE id = ?'),
+      insertCompanionRule: db.prepare('INSERT INTO companion_rules (id, crop_a, crop_b, type, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
+      updateCompanionRule: db.prepare('UPDATE companion_rules SET type = ?, note = ? WHERE id = ?'),
+      deleteCompanionRule: db.prepare('DELETE FROM companion_rules WHERE id = ?')
     };
   }
 
@@ -155,6 +165,16 @@ export class GardenRepository {
     );
     return event;
   }
+  listCompanionRules() { return this.statements.listCompanionRules.all().map(mapCompanionRule); }
+  findCompanionRule(id) { return mapCompanionRule(this.statements.findCompanionRule.get(id)); }
+  createCompanionRule(rule) {
+    this.statements.insertCompanionRule.run(rule.id, rule.pair[0], rule.pair[1], rule.type, rule.note, rule.createdAt);
+    return rule;
+  }
+  updateCompanionRule(id, patch) {
+    return this.statements.updateCompanionRule.run(patch.type, patch.note, id).changes > 0;
+  }
+  deleteCompanionRule(id) { return this.statements.deleteCompanionRule.run(id).changes > 0; }
 }
 
-export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent };
+export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent, mapCompanionRule };

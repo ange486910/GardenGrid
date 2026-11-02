@@ -10,10 +10,24 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7]);
     assert.deepEqual(migrateDatabase(db), []);
     const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events') ORDER BY name`).all().map((row) => row.name);
     assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events']);
+  } finally { db.close(); }
+});
+
+test('repository persists and updates companion rules', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    repository.createCompanionRule({ id: 'rule1', pair: ['basil', 'tomato'], type: 'companion', note: 'grow together', createdAt: '2026-11-01T08:00:00.000Z' });
+    repository.updateCompanionRule('rule1', { type: 'antagonist', note: 'revised guidance' });
+    assert.equal(repository.findCompanionRule('rule1').type, 'antagonist');
+    assert.equal(repository.listCompanionRules().length, 1);
+    repository.deleteCompanionRule('rule1');
+    assert.equal(repository.listCompanionRules().length, 0);
   } finally { db.close(); }
 });
 
