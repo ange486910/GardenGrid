@@ -54,3 +54,33 @@ test('season import API previews, imports and rejects corrupted packages', async
     assert.equal(rejected.status, 400);
   } finally { await f.close(); }
 });
+
+test('season import API applies a reviewed resolution after a fresh preview', async () => {
+  const f = await fixture();
+  try {
+    const plot = f.app.service.createPlot({ name: 'Bed A', areaSqm: 6 });
+    const tomato = f.app.service.createCrop({ name: 'Tomato', family: 'Solanaceae', daysToHarvest: 70, frostHardy: false });
+    const kale = f.app.service.createCrop({ name: 'Kale', family: 'Brassicaceae', daysToHarvest: 1, frostHardy: true });
+    f.app.service.plant({ plotId: plot.id, cropId: kale.id, plantedOn: '2026-06-01' });
+    const snapshot = sourceSnapshot();
+    const conflict = await f.request('/api/v1/imports/season', 'POST', { snapshot, dryRun: true });
+    assert.equal(conflict.status, 200);
+    assert.equal(JSON.parse(conflict.text).data.errors.length, 1);
+
+    const resolutions = {
+      format: 'gardengrid-season-resolutions', version: 1, snapshotChecksum: snapshot.checksum,
+      resolutions: [{
+        plantingId: snapshot.plantings[0].id, action: 'replace', plotId: plot.id, cropId: tomato.id,
+        plantedOn: '2026-06-03', expectedHarvestOn: '2026-07-10'
+      }]
+    };
+    const reviewed = await f.request('/api/v1/imports/season', 'POST', { snapshot, dryRun: true, resolutions });
+    const reviewedPayload = JSON.parse(reviewed.text).data;
+    assert.equal(reviewedPayload.errors.length, 0);
+    const applied = await f.request('/api/v1/imports/season', 'POST', {
+      snapshot, resolutions, previewToken: reviewedPayload.previewToken
+    });
+    assert.equal(applied.status, 200);
+    assert.equal(JSON.parse(applied.text).data.imported.plantings, 1);
+  } finally { await f.close(); }
+});

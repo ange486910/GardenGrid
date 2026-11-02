@@ -188,7 +188,11 @@ export function createApiServer(service, options = {}) {
       if (method === 'POST' && url.pathname === '/api/v1/imports/season') {
         const body = await readJson(request);
         return sendJson(response, 200, {
-          data: service.importSeason(body.snapshot, { dryRun: body.dryRun === true })
+          data: service.importSeason(body.snapshot, {
+            dryRun: body.dryRun === true,
+            resolutions: body.resolutions,
+            previewToken: body.previewToken
+          })
         });
       }
       if (method === 'GET' && url.pathname === '/api/v1/backup') {
