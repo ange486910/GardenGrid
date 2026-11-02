@@ -34,6 +34,8 @@ function parse(argv) {
     else if (token === '--interval-days') options.intervalDays = Number(argv[++index]);
     else if (token === '--rounds') options.rounds = argv[++index];
     else if (token === '--file') options.file = argv[++index];
+    else if (token === '--resolution-file') options.resolutionFile = argv[++index];
+    else if (token === '--preview-token') options.previewToken = argv[++index];
     else if (token === '--format') options.format = argv[++index];
     else if (token === '--harvest') options.harvest = argv[++index];
     else if (token === '--rule') options.rule = argv[++index];
@@ -62,7 +64,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js restore --file <json> [--database <path>]
   node src/cli/index.js yield [--plot <id>] [--database <path>]
   node src/cli/index.js season-export --file <path> --format <json|csv> [--database <path>]
-  node src/cli/index.js season-import --file <json> [--dry-run] [--database <path>]
+  node src/cli/index.js season-import --file <json> [--dry-run] [--resolution-file <json>] [--preview-token <token>] [--database <path>]
   node src/cli/index.js companions [--database <path>]
   node src/cli/index.js companion-rules [--database <path>]
   node src/cli/index.js companion-rule-add --crop-a <name> --crop-b <name> --type <companion|antagonist> --note <text>
@@ -154,7 +156,14 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     const snapshot = JSON.parse(readFileSync(options.file, 'utf8'));
-    const result = app.service.importSeason(snapshot, { dryRun: options.dryRun === true });
+    const resolutions = options.resolutionFile
+      ? JSON.parse(readFileSync(options.resolutionFile, 'utf8'))
+      : undefined;
+    const result = app.service.importSeason(snapshot, {
+      dryRun: options.dryRun === true,
+      resolutions,
+      previewToken: options.previewToken
+    });
     console.log(JSON.stringify({ status: 'ok', ...result }, null, 2));
   } finally { app.close(); }
 } else if (command === 'backup') {
