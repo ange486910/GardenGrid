@@ -82,7 +82,7 @@ export class GardenRepository {
       listPlots: db.prepare('SELECT * FROM plots ORDER BY display_order ASC, name ASC, id ASC'),
       updatePlotOrder: db.prepare('UPDATE plots SET display_order = ? WHERE id = ?'),
       findPlot: db.prepare('SELECT * FROM plots WHERE id = ?'),
-      insertPlot: db.prepare('INSERT INTO plots (id, name, area_sqm, sun_exposure, created_at) VALUES (?, ?, ?, ?, ?)'),
+      insertPlot: db.prepare('INSERT INTO plots (id, name, area_sqm, sun_exposure, display_order, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       listCrops: db.prepare('SELECT * FROM crops ORDER BY name ASC, id ASC'),
       findCrop: db.prepare('SELECT * FROM crops WHERE id = ?'),
       insertCrop: db.prepare(
@@ -131,7 +131,7 @@ export class GardenRepository {
   listPlots() { return this.statements.listPlots.all().map(mapPlot); }
   findPlot(id) { return mapPlot(this.statements.findPlot.get(id)); }
   updatePlotOrder(plotId, displayOrder) { return this.statements.updatePlotOrder.run(displayOrder, plotId).changes > 0; }
-  createPlot(plot) { this.statements.insertPlot.run(plot.id, plot.name, plot.areaSqm, plot.sunExposure, plot.createdAt); return plot; }
+  createPlot(plot) { this.statements.insertPlot.run(plot.id, plot.name, plot.areaSqm, plot.sunExposure, plot.displayOrder ?? 0, plot.createdAt); return plot; }
   listCrops() { return this.statements.listCrops.all().map(mapCrop); }
   findCrop(id) { return mapCrop(this.statements.findCrop.get(id)); }
   createCrop(crop) {

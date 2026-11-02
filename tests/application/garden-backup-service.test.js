@@ -45,3 +45,15 @@ test('garden restore refuses populated data and rolls back constraint failures',
     assert.throws(() => target.service.restoreBackup(backup), (error) => error.name === 'ConflictError');
   } finally { source.close(); target.close(); }
 });
+
+test('garden backup preserves the reviewed bed display order', () => {
+  const source = fixture('order_source');
+  const target = fixture('order_target');
+  try {
+    const a = source.service.createPlot({ name: 'Bed A', areaSqm: 4 });
+    const b = source.service.createPlot({ name: 'Bed B', areaSqm: 4 });
+    source.service.reorderPlots([b.id, a.id]);
+    target.service.restoreBackup(source.service.exportBackup());
+    assert.deepEqual(target.service.listPlots().map((row) => row.id), [b.id, a.id]);
+  } finally { source.close(); target.close(); }
+});
