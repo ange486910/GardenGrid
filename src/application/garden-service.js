@@ -2,6 +2,7 @@ import { calendarEvents, createCrop, createFrostProfile, createHarvest, createPl
 import { findCompanionIssues } from '../domain/companion-matcher.js';
 import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js';
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
+import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-planting.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
 import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
@@ -289,6 +290,52 @@ export function createGardenService(repository, dependencies = {}) {
       const crop = requireCrop(cropId);
       const profile = requireFrostProfile(profileId);
       return successionSchedule({ crop, profile, count: count ?? 4, intervalDays: intervalDays ?? 14 });
+    },
+
+    createSuccession(input = {}) {
+      const plot = requirePlot(input.plotId);
+      const crop = requireCrop(input.cropId);
+      const profile = requireFrostProfile(input.profileId);
+      if (crop.archivedAt) throw new ConflictError('archived crops cannot be planted', { cropId: crop.id, archivedAt: crop.archivedAt });
+      const plan = successionSchedule({
+        crop,
+        profile,
+        count: input.count ?? 4,
+        intervalDays: input.intervalDays ?? 14
+      });
+      const drafts = successionPlantingDrafts({
+        plan,
+        plotId: plot.id,
+        cropId: crop.id,
+        selectedRounds: input.selectedRounds
+      });
+      const existingPlantings = repository.listPlantings();
+      const overlap = findPlotOverlap(drafts, existingPlantings);
+      if (overlap) {
+        throw new ConflictError('succession round overlaps an existing planting', {
+          round: overlap.draft.round,
+          plantingId: overlap.conflict.id
+        });
+      }
+      const existingEvents = repository.listRotationEvents();
+      for (const draft of drafts) {
+        if (hasRecentFamilyConflict({ crop, plotId: plot.id, events: existingEvents, plantedOn: draft.plantedOn })) {
+          throw new ConflictError(`rotation conflict: ${crop.family} was planted in ${plot.name} within three years`, {
+            plotId: plot.id,
+            cropId: crop.id,
+            family: crop.family
+          });
+        }
+      }
+      return run(() => {
+        const plantings = drafts.map((draft) => repository.createPlanting(createPlanting(draft, crop, dependencies)));
+        const rotationEvents = plantings.map((planting) => {
+          const event = createRotationEvent({ plotId: plot.id, cropId: crop.id, plantedOn: planting.plantedOn }, crop, dependencies);
+          repository.createRotationEvent(event);
+          return event;
+        });
+        return { plot, crop, profile, plan, plantings, rotationEvents };
+      });
     },
 
     plant(input) {
