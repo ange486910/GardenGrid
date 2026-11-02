@@ -34,6 +34,8 @@ test('succession creation persists selected rounds and rotation snapshots togeth
     assert.equal(app.service.listPlantings().length, 2);
     assert.equal(app.service.listRotationEvents().length, 2);
     assert.equal(result.rotationEvents[1].family, 'Brassicaceae');
+    assert.deepEqual(result.batch.selectedRounds, [1, 3]);
+    assert.deepEqual(app.service.listSuccessionBatches()[0].plantingIds, result.plantings.map((row) => row.id));
   } finally { app.close(); }
 });
 

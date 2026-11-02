@@ -10,10 +10,10 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
     assert.deepEqual(migrateDatabase(db), []);
-    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events') ORDER BY name`).all().map((row) => row.name);
-    assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events']);
+    const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events','succession_batches') ORDER BY name`).all().map((row) => row.name);
+    assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events', 'succession_batches']);
   } finally { db.close(); }
 });
 

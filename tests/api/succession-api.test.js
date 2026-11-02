@@ -31,6 +31,9 @@ test('succession API creates selected rounds and reports overlap conflicts', asy
     assert.equal(created.status, 201);
     assert.equal(created.body.data.plantings.length, 1);
     assert.equal(created.body.data.plantings[0].plantedOn, '2026-05-15');
+    const batches = await request('/api/v1/succession-batches');
+    assert.equal(batches.status, 200);
+    assert.deepEqual(batches.body.data[0].selectedRounds, [2]);
 
     const overlap = await request('/api/v1/plantings/succession', 'POST', {
       plotId: plot.id, cropId: crop.id, profileId: profile.id,

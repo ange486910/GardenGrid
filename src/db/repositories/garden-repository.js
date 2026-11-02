@@ -47,6 +47,20 @@ function mapCompanionRule(row) {
   if (!row) return null;
   return { id: row.id, pair: [row.crop_a, row.crop_b], type: row.type, note: row.note, createdAt: row.created_at };
 }
+function mapSuccessionBatch(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    plotId: row.plot_id,
+    cropId: row.crop_id,
+    profileId: row.profile_id,
+    intervalDays: Number(row.interval_days),
+    selectedRounds: JSON.parse(row.selected_rounds_json),
+    plantingIds: JSON.parse(row.planting_ids_json),
+    rotationEventIds: JSON.parse(row.rotation_event_ids_json),
+    createdAt: row.created_at
+  };
+}
 
 export class GardenRepository {
   constructor(db) {
@@ -85,7 +99,12 @@ export class GardenRepository {
       findCompanionRule: db.prepare('SELECT * FROM companion_rules WHERE id = ?'),
       insertCompanionRule: db.prepare('INSERT INTO companion_rules (id, crop_a, crop_b, type, note, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
       updateCompanionRule: db.prepare('UPDATE companion_rules SET type = ?, note = ? WHERE id = ?'),
-      deleteCompanionRule: db.prepare('DELETE FROM companion_rules WHERE id = ?')
+      deleteCompanionRule: db.prepare('DELETE FROM companion_rules WHERE id = ?'),
+      listSuccessionBatches: db.prepare('SELECT * FROM succession_batches ORDER BY created_at ASC, id ASC'),
+      insertSuccessionBatch: db.prepare(
+        'INSERT INTO succession_batches (id, plot_id, crop_id, profile_id, interval_days, selected_rounds_json, planting_ids_json, rotation_event_ids_json, created_at) '
+        + 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      )
     };
   }
 
@@ -179,6 +198,21 @@ export class GardenRepository {
     return this.statements.updateCompanionRule.run(patch.type, patch.note, id).changes > 0;
   }
   deleteCompanionRule(id) { return this.statements.deleteCompanionRule.run(id).changes > 0; }
+  listSuccessionBatches() { return this.statements.listSuccessionBatches.all().map(mapSuccessionBatch); }
+  createSuccessionBatch(batch) {
+    this.statements.insertSuccessionBatch.run(
+      batch.id,
+      batch.plotId,
+      batch.cropId,
+      batch.profileId,
+      batch.intervalDays,
+      JSON.stringify(batch.selectedRounds),
+      JSON.stringify(batch.plantingIds),
+      JSON.stringify(batch.rotationEventIds),
+      batch.createdAt
+    );
+    return batch;
+  }
 }
 
-export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent, mapCompanionRule };
+export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent, mapCompanionRule, mapSuccessionBatch };

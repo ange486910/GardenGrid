@@ -50,6 +50,7 @@ export function createGardenService(repository, dependencies = {}) {
     listPlantings() { return repository.listPlantings(); },
     listHarvests() { return repository.listHarvests(); },
     listRotationEvents() { return repository.listRotationEvents(); },
+    listSuccessionBatches() { return repository.listSuccessionBatches(); },
 
     recordHarvest(input) {
       const harvest = createHarvest(input, dependencies);
@@ -334,7 +335,18 @@ export function createGardenService(repository, dependencies = {}) {
           repository.createRotationEvent(event);
           return event;
         });
-        return { plot, crop, profile, plan, plantings, rotationEvents };
+        const batch = repository.createSuccessionBatch({
+          id: dependencies.createId?.('succession_batch') ?? `succession_batch_${Date.now()}`,
+          plotId: plot.id,
+          cropId: crop.id,
+          profileId: profile.id,
+          intervalDays: plan.intervalDays,
+          selectedRounds: drafts.map((draft) => draft.round),
+          plantingIds: plantings.map((planting) => planting.id),
+          rotationEventIds: rotationEvents.map((event) => event.id),
+          createdAt: clock.now().toISOString()
+        });
+        return { plot, crop, profile, plan, batch, plantings, rotationEvents };
       });
     },
 
