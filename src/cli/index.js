@@ -42,6 +42,7 @@ function parse(argv) {
     else if (token === '--type') options.type = argv[++index];
     else if (token === '--note') options.note = argv[++index];
     else if (token === '--crop-action') options.cropAction = argv[++index];
+    else if (token === '--kind') options.kind = argv[++index];
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -67,6 +68,8 @@ const help = `GardenGrid CLI
   node src/cli/index.js companion-rule-add --crop-a <name> --crop-b <name> --type <companion|antagonist> --note <text>
   node src/cli/index.js companion-rule-delete --rule <id>
   node src/cli/index.js rotation-record --plot <id> --crop <id> --date YYYY-MM-DD [--ended YYYY-MM-DD]
+  node src/cli/index.js rest-add --plot <id> --kind <fallow|cover_crop> --date YYYY-MM-DD --ended YYYY-MM-DD [--crop <id>] [--note <text>]
+  node src/cli/index.js rest-list [--plot <id>]
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
   node src/cli/index.js crop --name <name> --family <family> --days <n> --frost-hardy <true|false>
   node src/cli/index.js crop-status --crop <id> --crop-action <archive|restore>
@@ -187,6 +190,24 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', ...app.service.deleteCompanionRule(options.rule) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'rest-add') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const period = app.service.recordRestPeriod({
+      plotId: options.plot,
+      kind: options.kind,
+      cropId: options.crop,
+      startedOn: options.date,
+      endedOn: options.ended,
+      note: options.note
+    });
+    console.log(JSON.stringify({ status: 'ok', period }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'rest-list') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', periods: app.service.listRestPeriods(options.plot) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'rotation-record') {
   const app = createApplication({ databasePath: options.databasePath });
