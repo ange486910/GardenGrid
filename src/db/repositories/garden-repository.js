@@ -12,6 +12,7 @@ function mapCrop(row) {
     frostHardy: Number(row.frost_hardy) === 1,
     earliestSowWeeks: row.earliest_sow_weeks == null ? null : Number(row.earliest_sow_weeks),
     latestSowWeeks: row.latest_sow_weeks == null ? null : Number(row.latest_sow_weeks),
+    archivedAt: row.archived_at ?? null,
     createdAt: row.created_at
   };
 }
@@ -57,9 +58,10 @@ export class GardenRepository {
       listCrops: db.prepare('SELECT * FROM crops ORDER BY name ASC, id ASC'),
       findCrop: db.prepare('SELECT * FROM crops WHERE id = ?'),
       insertCrop: db.prepare(
-        'INSERT INTO crops (id, name, family, days_to_harvest, frost_hardy, earliest_sow_weeks, latest_sow_weeks, created_at) '
-        + 'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO crops (id, name, family, days_to_harvest, frost_hardy, earliest_sow_weeks, latest_sow_weeks, archived_at, created_at) '
+        + 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
       ),
+      setCropArchived: db.prepare('UPDATE crops SET archived_at = ? WHERE id = ?'),
       listFrostProfiles: db.prepare('SELECT * FROM frost_profiles ORDER BY name ASC, id ASC'),
       findFrostProfile: db.prepare('SELECT * FROM frost_profiles WHERE id = ?'),
       insertFrostProfile: db.prepare('INSERT INTO frost_profiles (id, name, zone, last_frost_date, first_frost_date, created_at) VALUES (?, ?, ?, ?, ?, ?)'),
@@ -101,10 +103,12 @@ export class GardenRepository {
       crop.frostHardy ? 1 : 0,
       crop.earliestSowWeeks ?? null,
       crop.latestSowWeeks ?? null,
+      crop.archivedAt ?? null,
       crop.createdAt
     );
     return crop;
   }
+  setCropArchived(id, archivedAt) { return this.statements.setCropArchived.run(archivedAt, id).changes > 0; }
   listFrostProfiles() { return this.statements.listFrostProfiles.all().map(mapFrostProfile); }
   findFrostProfile(id) { return mapFrostProfile(this.statements.findFrostProfile.get(id)); }
   createFrostProfile(profile) { this.statements.insertFrostProfile.run(profile.id, profile.name, profile.zone, profile.lastFrostDate, profile.firstFrostDate, profile.createdAt); return profile; }

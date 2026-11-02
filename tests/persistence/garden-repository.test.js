@@ -10,10 +10,21 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8]);
     assert.deepEqual(migrateDatabase(db), []);
     const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events') ORDER BY name`).all().map((row) => row.name);
     assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rotation_events']);
+  } finally { db.close(); }
+});
+
+test('repository archives a crop without deleting its history', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    repository.createCrop({ id: 'crop', name: 'Lettuce', family: 'Asteraceae', daysToHarvest: 45, frostHardy: true, createdAt: '2026-11-01T08:00:00.000Z' });
+    repository.setCropArchived('crop', '2026-11-02T08:00:00.000Z');
+    assert.equal(repository.findCrop('crop').archivedAt, '2026-11-02T08:00:00.000Z');
   } finally { db.close(); }
 });
 
