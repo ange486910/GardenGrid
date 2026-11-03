@@ -47,6 +47,7 @@ function parse(argv) {
     else if (token === '--crop-action') options.cropAction = argv[++index];
     else if (token === '--kind') options.kind = argv[++index];
     else if (token === '--ids') options.ids = argv[++index];
+    else if (token === '--season') options.season = Number(argv[++index]);
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -76,6 +77,8 @@ const help = `GardenGrid CLI
   node src/cli/index.js rest-add --plot <id> --kind <fallow|cover_crop> --date YYYY-MM-DD --ended YYYY-MM-DD [--crop <id>] [--note <text>]
   node src/cli/index.js rest-list [--plot <id>]
   node src/cli/index.js plot-reorder --ids <id1,id2,...>
+  node src/cli/index.js target-add --plot <id> --crop <id> --season <year> --quantity <n> --unit <unit>
+  node src/cli/index.js target-report --season <year>
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
   node src/cli/index.js crop --name <name> --family <family> --days <n> --frost-hardy <true|false>
   node src/cli/index.js crop-status --crop <id> --crop-action <archive|restore>
@@ -211,6 +214,20 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', ...app.service.deleteCompanionRule(options.rule) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'target-add') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const target = app.service.setHarvestTarget({
+      plotId: options.plot, cropId: options.crop, season: options.season,
+      targetQuantity: options.quantity, unit: options.unit, note: options.note
+    });
+    console.log(JSON.stringify({ status: 'ok', target }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'target-report') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({ status: 'ok', report: app.service.harvestTargetReport(options.season) }, null, 2));
   } finally { app.close(); }
 } else if (command === 'plot-reorder') {
   const app = createApplication({ databasePath: options.databasePath });
