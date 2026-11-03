@@ -15,7 +15,7 @@ test('garden beds are navigable with arrow keys', { timeout: 30000 }, async (t) 
     try {
       browser = await launchGardenBrowser(`${base}/`);
     } catch (error) {
-      t.skip(`Edge browser unavailable: ${error.message}`);
+      t.skip(`Chromium browser unavailable: ${error.message}`);
       return;
     }
     await browser.waitFor("document.querySelectorAll('[data-role=\"plot-cards\"] article').length === 2");

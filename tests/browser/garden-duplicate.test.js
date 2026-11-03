@@ -15,7 +15,7 @@ test('garden browser ignores duplicate planting submissions', { timeout: 30000 }
     try {
       browser = await launchGardenBrowser(`${base}/`);
     } catch (error) {
-      t.skip(`Edge browser unavailable: ${error.message}`);
+      t.skip(`Chromium browser unavailable: ${error.message}`);
       return;
     }
     await browser.waitFor("document.querySelectorAll('[data-role=\"plant-form\"] select[name=\"cropId\"] option').length === 1");

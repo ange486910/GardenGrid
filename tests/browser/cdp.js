@@ -1,10 +1,28 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { closeSync, mkdtempSync, openSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdtempSync, openSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const EDGE = process.env.EDGE_PATH ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const BROWSER_CANDIDATES = [
+  process.env.BROWSER_PATH,
+  process.env.CHROME_PATH,
+  process.env.EDGE_PATH,
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/microsoft-edge',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+].filter(Boolean);
+
+function browserExecutable() {
+  const executable = BROWSER_CANDIDATES.find((candidate) => existsSync(candidate));
+  if (!executable) throw new Error('Chromium browser executable not found');
+  return executable;
+}
 const LOCK = join(tmpdir(), 'gardengrid-edge-suite.lock');
 
 function terminateBrowser(child) {
@@ -16,7 +34,7 @@ function terminateBrowser(child) {
 }
 
 async function acquireBrowserLock() {
-  const deadline = Date.now() + 5_000;
+  const deadline = Date.now() + 20_000;
   while (Date.now() < deadline) {
     try {
       const handle = openSync(LOCK, 'wx');
@@ -28,7 +46,7 @@ async function acquireBrowserLock() {
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
       try {
-        if (Date.now() - statSync(LOCK).mtimeMs > 5_000) unlinkSync(LOCK);
+        if (Date.now() - statSync(LOCK).mtimeMs > 120_000) unlinkSync(LOCK);
       } catch { /* lock changed while checking */ }
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
@@ -47,8 +65,9 @@ function freePort() {
   });
 }
 
-async function findTarget(port) {
+async function findTarget(port, getSpawnError) {
   for (let attempt = 0; attempt < 80; attempt += 1) {
+    if (getSpawnError()) throw getSpawnError();
     try {
       const response = await fetch(`http://127.0.0.1:${port}/json/list`);
       const targets = await response.json();
@@ -61,17 +80,20 @@ async function findTarget(port) {
 }
 
 export async function launchGardenBrowser(url) {
+  const executable = browserExecutable();
   const releaseLock = await acquireBrowserLock();
   const port = await freePort();
   const profile = mkdtempSync(join(tmpdir(), 'gardengrid-edge-'));
-  const process = spawn(EDGE, [
+  const process = spawn(executable, [
     '--headless=new', '--disable-gpu', '--disable-extensions', '--no-first-run',
     '--no-default-browser-check', '--no-proxy-server', `--remote-debugging-port=${port}`,
     `--user-data-dir=${profile}`, 'about:blank'
   ], { stdio: 'ignore', windowsHide: true });
+  let spawnError = null;
   let launched = false;
+  process.once('error', (error) => { spawnError = error; });
   try {
-    const page = await findTarget(port);
+    const page = await findTarget(port, () => spawnError);
     const socket = new WebSocket(page.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('browser socket open timed out')), 5000);

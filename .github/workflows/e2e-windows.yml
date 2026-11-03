@@ -15,4 +15,4 @@ jobs:
         with:
           node-version: '24.x'
       - name: Browser integration tests
-        run: node --test tests/browser
+        run: node --test tests/browser/*.test.js
