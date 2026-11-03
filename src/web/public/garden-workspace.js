@@ -12,6 +12,7 @@ export async function mountGardenWorkspace(root, options = {}) {
   const harvestForm = root.querySelector('[data-role="harvest-form"]');
   const targetForm = root.querySelector('[data-role="target-form"]');
   const targetReport = root.querySelector('[data-role="target-report"]');
+  const calendarExport = root.querySelector('[data-role="calendar-export"]');
   const today = options.today ?? new Date().toISOString().slice(0, 10);
   const submitPlant = createGardenSubmissionGuard();
   const submitHarvest = createGardenSubmissionGuard();
@@ -140,6 +141,24 @@ export async function mountGardenWorkspace(root, options = {}) {
       }
     });
   });
+  calendarExport?.addEventListener('click', async () => {
+    try {
+      const from = `${today.slice(0, 4)}-01-01`;
+      const to = `${today.slice(0, 4)}-12-31`;
+      const body = await api.calendarIcs(from, to, null);
+      const blob = new Blob([body], { type: 'text/calendar' });
+      const url = URL.createObjectURL(blob);
+      const link = root.ownerDocument.createElement('a');
+      link.href = url;
+      link.download = 'gardengrid-calendar.ics';
+      link.click();
+      URL.revokeObjectURL(url);
+      message(root, 'Calendar ready');
+    } catch (error) {
+      message(root, error.message);
+    }
+  });
+
   targetForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     try {

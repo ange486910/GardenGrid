@@ -17,12 +17,14 @@ test('garden API client shapes plot queries and tree posts', async () => {
   await api.reorderPlots(['bed_b', 'bed_a']);
   await api.harvestTargets(2026);
   await api.harvestTargetReport(2026);
+  await api.calendarIcs('2026-01-01', '2026-12-31', 'bed a');
   assert.equal(calls[0].path, '/api/v1/yield?plotId=bed%20a');
   assert.equal(JSON.parse(calls[1].options.body).cropId, 'tomato');
   assert.equal(calls[2].path, '/api/v1/plots/order');
   assert.deepEqual(JSON.parse(calls[2].options.body).plotIds, ['bed_b', 'bed_a']);
   assert.equal(calls[3].path, '/api/v1/harvest-targets?season=2026');
   assert.equal(calls[4].path, '/api/v1/harvest-targets/report?season=2026');
+  assert.equal(calls[5].path, '/api/v1/calendar.ics?from=2026-01-01&to=2026-12-31&plotId=bed%20a');
 });
 
 test('garden API client preserves server conflict details', async () => {

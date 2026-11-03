@@ -28,6 +28,9 @@ export function createGardenApi(fetchImpl = globalThis.fetch) {
 
   return {
     plots: () => request('/api/v1/plots'),
+    calendarIcs: (from, to, plotId) => request(
+      `/api/v1/calendar.ics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${plotId ? `&plotId=${encodeURIComponent(plotId)}` : ''}`
+    ),
     reorderPlots: (plotIds) => request('/api/v1/plots/order', { method: 'PATCH', body: { plotIds } }),
     crops: () => request('/api/v1/crops'),
     plantings: () => request('/api/v1/plantings'),
