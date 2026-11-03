@@ -4,13 +4,14 @@ import { COMPANION_RULES, validateCompanionRule } from '../domain/companions.js'
 import { createRotationEvent, hasRecentFamilyConflict, rotationReport } from '../domain/rotation-history.js';
 import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-planting.js';
 import { createRestPeriod, findRestConflict, summarizeRestPeriods } from '../domain/rest-period.js';
+import { buildHarvestTargetReport, createHarvestTarget } from '../domain/harvest-target.js';
 import { normalizePlotOrder } from '../domain/plot-order.js';
 import { applySeasonResolutions, seasonImportPreviewToken, suggestSeasonResolutions } from '../domain/season-import-resolution.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
 import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
 import { buildGardenBackup, validateGardenBackup } from '../domain/backup.js';
-import { ConflictError, NotFoundError, ValidationError, requireDate } from '../domain/validation.js';
+import { ConflictError, NotFoundError, ValidationError, requireDate, requireInteger } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
   const run = dependencies.transaction ?? ((work) => work());
@@ -60,6 +61,7 @@ export function createGardenService(repository, dependencies = {}) {
     },
     listPlantings() { return repository.listPlantings(); },
     listHarvests() { return repository.listHarvests(); },
+    listHarvestTargets(season) { return repository.listHarvestTargets(season == null ? null : requireInteger(Number(season), 'season', { min: 2000, max: 2100 })); },
     listRotationEvents() { return repository.listRotationEvents(); },
     listRestPeriods(plotId) { return plotId ? repository.listRestPeriodsByPlot(plotId) : repository.listRestPeriods(); },
     listSuccessionBatches() { return repository.listSuccessionBatches(); },
@@ -141,6 +143,39 @@ export function createGardenService(repository, dependencies = {}) {
     deleteCompanionRule(id) {
       if (!repository.deleteCompanionRule(id)) throw new NotFoundError('companion rule', id);
       return { id, deleted: true };
+    },
+
+    setHarvestTarget(input = {}) {
+      const plot = requirePlot(input.plotId);
+      const crop = requireCrop(input.cropId);
+      const target = createHarvestTarget({ ...input, plotId: plot.id, cropId: crop.id }, dependencies);
+      if (repository.findHarvestTargetBySlot(target.plotId, target.cropId, target.season, target.unit)) {
+        throw new ConflictError('harvest target already exists for this bed, crop, season and unit', {
+          plotId: target.plotId,
+          cropId: target.cropId,
+          season: target.season,
+          unit: target.unit
+        });
+      }
+      return run(() => repository.createHarvestTarget(target));
+    },
+
+    harvestTargetReport(season) {
+      const year = requireInteger(Number(season), 'season', { min: 2000, max: 2100 });
+      const harvests = repository.listHarvests().filter((row) => row.harvestedOn.startsWith(`${year}-`));
+      const yields = projectYieldByPlot({
+        harvests,
+        plantings: repository.listPlantings(),
+        crops: repository.listCrops(),
+        plots: repository.listPlots()
+      });
+      return {
+        season: year,
+        ...buildHarvestTargetReport({
+          targets: repository.listHarvestTargets(year),
+          yieldRows: yields.rows
+        })
+      };
     },
 
     yieldReport() {

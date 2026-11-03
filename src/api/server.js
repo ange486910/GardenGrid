@@ -140,6 +140,15 @@ export function createApiServer(service, options = {}) {
       if (method === 'GET' && url.pathname === '/api/v1/harvests') {
         return sendJson(response, 200, { data: service.listHarvests() });
       }
+      if (method === 'GET' && url.pathname === '/api/v1/harvest-targets') {
+        return sendJson(response, 200, { data: service.listHarvestTargets(url.searchParams.get('season') ?? undefined) });
+      }
+      if (method === 'POST' && url.pathname === '/api/v1/harvest-targets') {
+        return sendJson(response, 201, { data: service.setHarvestTarget(await readJson(request)) });
+      }
+      if (method === 'GET' && url.pathname === '/api/v1/harvest-targets/report') {
+        return sendJson(response, 200, { data: service.harvestTargetReport(url.searchParams.get('season')) });
+      }
       if (method === 'POST' && url.pathname === '/api/v1/harvests') {
         return sendJson(response, 201, { data: service.recordHarvest(await readJson(request)) });
       }
