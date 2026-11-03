@@ -47,6 +47,20 @@ function mapCompanionRule(row) {
   if (!row) return null;
   return { id: row.id, pair: [row.crop_a, row.crop_b], type: row.type, note: row.note, createdAt: row.created_at };
 }
+function mapHarvestTarget(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    plotId: row.plot_id,
+    cropId: row.crop_id,
+    season: Number(row.season),
+    unit: row.unit,
+    targetQuantity: Number(row.target_quantity),
+    note: row.note,
+    createdAt: row.created_at
+  };
+}
+
 function mapRestPeriod(row) {
   if (!row) return null;
   return {
@@ -111,6 +125,12 @@ export class GardenRepository {
       ),
       listCompanionRules: db.prepare('SELECT * FROM companion_rules ORDER BY crop_a ASC, crop_b ASC'),
       listRestPeriods: db.prepare('SELECT * FROM rest_periods ORDER BY started_on ASC, id ASC'),
+      listHarvestTargets: db.prepare('SELECT * FROM harvest_targets WHERE (? IS NULL OR season = ?) ORDER BY season DESC, plot_id ASC, crop_id ASC, unit ASC'),
+      findHarvestTarget: db.prepare('SELECT * FROM harvest_targets WHERE id = ?'),
+      findHarvestTargetBySlot: db.prepare('SELECT * FROM harvest_targets WHERE plot_id = ? AND crop_id = ? AND season = ? AND unit = ?'),
+      insertHarvestTarget: db.prepare(
+        'INSERT INTO harvest_targets (id, plot_id, crop_id, season, unit, target_quantity, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ),
       listRestPeriodsByPlot: db.prepare('SELECT * FROM rest_periods WHERE plot_id = ? ORDER BY started_on ASC, id ASC'),
       findRestPeriod: db.prepare('SELECT * FROM rest_periods WHERE id = ?'),
       insertRestPeriod: db.prepare(
@@ -211,6 +231,16 @@ export class GardenRepository {
   }
   listCompanionRules() { return this.statements.listCompanionRules.all().map(mapCompanionRule); }
   listRestPeriods() { return this.statements.listRestPeriods.all().map(mapRestPeriod); }
+  listHarvestTargets(season = null) { return this.statements.listHarvestTargets.all(season, season).map(mapHarvestTarget); }
+  findHarvestTarget(id) { return mapHarvestTarget(this.statements.findHarvestTarget.get(id)); }
+  findHarvestTargetBySlot(plotId, cropId, season, unit) { return mapHarvestTarget(this.statements.findHarvestTargetBySlot.get(plotId, cropId, season, unit)); }
+  createHarvestTarget(target) {
+    this.statements.insertHarvestTarget.run(
+      target.id, target.plotId, target.cropId, target.season, target.unit,
+      target.targetQuantity, target.note, target.createdAt
+    );
+    return target;
+  }
   listRestPeriodsByPlot(plotId) { return this.statements.listRestPeriodsByPlot.all(plotId).map(mapRestPeriod); }
   findRestPeriod(id) { return mapRestPeriod(this.statements.findRestPeriod.get(id)); }
   createRestPeriod(period) {
@@ -252,4 +282,4 @@ export class GardenRepository {
   }
 }
 
-export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent, mapCompanionRule, mapSuccessionBatch, mapRestPeriod };
+export { mapPlot, mapCrop, mapPlanting, mapFrostProfile, mapHarvest, mapRotationEvent, mapCompanionRule, mapSuccessionBatch, mapRestPeriod, mapHarvestTarget };

@@ -10,7 +10,7 @@ import { createCrop, createPlanting, createPlot } from '../../src/domain/garden.
 test('migrations create the garden schema and stay idempotent', () => {
   const db = openDatabase(':memory:');
   try {
-    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    assert.deepEqual(migrateDatabase(db), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     assert.deepEqual(migrateDatabase(db), []);
     const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name IN ('plots','crops','plantings','rotation_events','succession_batches','rest_periods') ORDER BY name`).all().map((row) => row.name);
     assert.deepEqual(tables, ['crops', 'plantings', 'plots', 'rest_periods', 'rotation_events', 'succession_batches']);
@@ -158,5 +158,19 @@ test('repository stores a deterministic bed display order', () => {
     repository.updatePlotOrder('b', 1);
     assert.deepEqual(repository.listPlots().map((row) => row.id), ['b', 'a']);
     assert.deepEqual(repository.listPlots().map((row) => row.displayOrder), [1, 2]);
+  } finally { db.close(); }
+});
+
+test('repository stores one seasonal harvest target per bed crop unit', () => {
+  const db = openDatabase(':memory:');
+  try {
+    migrateDatabase(db);
+    const repository = new GardenRepository(db);
+    const createdAt = '2026-11-03T08:00:00.000Z';
+    repository.createPlot({ id: 'bed', name: 'Bed A', areaSqm: 6, sunExposure: 'full', createdAt });
+    repository.createCrop({ id: 'tomato', name: 'Tomato', family: 'Solanaceae', daysToHarvest: 70, frostHardy: false, earliestSowWeeks: null, latestSowWeeks: null, createdAt });
+    repository.createHarvestTarget({ id: 'target1', plotId: 'bed', cropId: 'tomato', season: 2026, unit: 'kg', targetQuantity: 12, note: 'main season', createdAt });
+    assert.equal(repository.findHarvestTargetBySlot('bed', 'tomato', 2026, 'kg').id, 'target1');
+    assert.throws(() => repository.createHarvestTarget({ id: 'target2', plotId: 'bed', cropId: 'tomato', season: 2026, unit: 'kg', targetQuantity: 20, note: null, createdAt }), /UNIQUE/);
   } finally { db.close(); }
 });
