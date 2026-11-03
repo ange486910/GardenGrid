@@ -2,6 +2,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createApplication } from '../application/create-application.js';
 import { startServer } from '../api/server.js';
+import { runBackupMaintenance } from '../application/backup-maintenance.js';
+import { validateGardenBackup } from '../domain/backup.js';
 
 function parse(argv) {
   const command = argv[2] ?? 'help';
@@ -48,6 +50,9 @@ function parse(argv) {
     else if (token === '--kind') options.kind = argv[++index];
     else if (token === '--ids') options.ids = argv[++index];
     else if (token === '--season') options.season = Number(argv[++index]);
+    else if (token === '--dir') options.dir = argv[++index];
+    else if (token === '--keep') options.keep = Number(argv[++index]);
+    else if (token === '--cadence-hours') options.cadenceHours = Number(argv[++index]);
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -77,6 +82,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js rest-add --plot <id> --kind <fallow|cover_crop> --date YYYY-MM-DD --ended YYYY-MM-DD [--crop <id>] [--note <text>]
   node src/cli/index.js rest-list [--plot <id>]
   node src/cli/index.js plot-reorder --ids <id1,id2,...>
+  node src/cli/index.js backup-auto --dir <path> [--keep <n>] [--dry-run]
   node src/cli/index.js target-add --plot <id> --crop <id> --season <year> --quantity <n> --unit <unit>
   node src/cli/index.js target-report --season <year>
   node src/cli/index.js rotation-report --as-of YYYY-MM-DD [--database <path>]
@@ -178,6 +184,16 @@ if (command === 'migrate') {
       dryRun: options.dryRun === true,
       resolutions,
       previewToken: options.previewToken
+    });
+    console.log(JSON.stringify({ status: 'ok', ...result }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'backup-auto') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const result = await runBackupMaintenance({
+      backup: app.service.exportBackup(), directory: options.dir, prefix: 'gardengrid',
+      keep: options.keep ?? 7, cadenceHours: options.cadenceHours ?? 24,
+      now: new Date().toISOString(), dryRun: options.dryRun === true, validate: validateGardenBackup
     });
     console.log(JSON.stringify({ status: 'ok', ...result }, null, 2));
   } finally { app.close(); }
