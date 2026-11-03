@@ -72,10 +72,55 @@ export function restWorkTasks({ restPeriods, plots, asOf, horizonDays = 14, look
     .filter(Boolean);
 }
 
+
+export function targetWorkTasks({ harvestTargets = [], yieldRows = [], crops, plots, asOf, horizonDays = 14, lookbackDays = 7, plotId = null }) {
+  const start = addDays(asOf, -lookbackDays);
+  const end = addDays(asOf, horizonDays);
+  const cropById = new Map(crops.map((crop) => [crop.id, crop]));
+  const plotById = new Map(plots.map((plot) => [plot.id, plot]));
+  const actualByKey = new Map(yieldRows.map((row) => [`${row.plotId}:${row.cropId}:${row.unit}`, row.totalQuantity]));
+  return harvestTargets
+    .filter((target) => !plotId || target.plotId === plotId)
+    .map((target) => {
+      const actualQuantity = actualByKey.get(`${target.plotId}:${target.cropId}:${target.unit}`) ?? 0;
+      if (actualQuantity >= target.targetQuantity) return null;
+      const dueOn = `${target.season}-12-31`;
+      if (dueOn < start || dueOn > end) return null;
+      const crop = cropById.get(target.cropId);
+      const plot = plotById.get(target.plotId);
+      if (!crop || !plot) return null;
+      const remaining = Math.round((target.targetQuantity - actualQuantity) * 100) / 100;
+      return {
+        id: `target:${target.id}`,
+        type: 'target-review',
+        sourceId: target.id,
+        plotId: plot.id,
+        plotName: plot.name,
+        title: `Review ${crop.name} target in ${plot.name}`,
+        detail: `${actualQuantity} of ${target.targetQuantity} ${target.unit} harvested; ${remaining} ${target.unit} remaining`,
+        dueOn,
+        priority: taskPriority(dueOn, asOf)
+      };
+    })
+    .filter(Boolean);
+}
+
+export function workQueueSummary(tasks) {
+  return {
+    total: tasks.length,
+    overdue: tasks.filter((task) => task.priority === 'overdue').length,
+    today: tasks.filter((task) => task.priority === 'today').length,
+    upcoming: tasks.filter((task) => task.priority === 'upcoming').length,
+    harvest: tasks.filter((task) => task.type === 'harvest').length,
+    bedRelease: tasks.filter((task) => task.type === 'bed-release').length,
+    targetReview: tasks.filter((task) => task.type === 'target-review').length
+  };
+}
 export function gardenWorkQueue(options) {
   const tasks = [
     ...harvestWorkTasks(options),
-    ...restWorkTasks(options)
+    ...restWorkTasks(options),
+    ...targetWorkTasks(options)
   ];
   return tasks.sort((left, right) => (
     priorityRank(left.priority) - priorityRank(right.priority)
