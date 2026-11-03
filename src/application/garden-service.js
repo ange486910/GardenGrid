@@ -6,6 +6,7 @@ import { findPlotOverlap, successionPlantingDrafts } from '../domain/succession-
 import { createRestPeriod, findRestConflict, summarizeRestPeriods } from '../domain/rest-period.js';
 import { buildHarvestTargetReport, createHarvestTarget } from '../domain/harvest-target.js';
 import { normalizePlotOrder } from '../domain/plot-order.js';
+import { buildCalendarIcs } from '../domain/icalendar.js';
 import { applySeasonResolutions, seasonImportPreviewToken, suggestSeasonResolutions } from '../domain/season-import-resolution.js';
 import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js';
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
@@ -517,6 +518,16 @@ export function createGardenService(repository, dependencies = {}) {
             to: report.asOf
           })
         }))
+      };
+    },
+
+    exportCalendarIcs({ from, to, plotId = null }) {
+      const events = this.calendar(from, to, plotId);
+      const calendarName = plotId ? requirePlot(plotId).name : 'GardenGrid';
+      return {
+        filename: 'gardengrid-calendar.ics',
+        contentType: 'text/calendar; charset=utf-8',
+        body: buildCalendarIcs({ calendarName, events, generatedAt: clock.now().toISOString() })
       };
     },
 
