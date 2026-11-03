@@ -46,4 +46,42 @@ export function harvestWorkTasks({ plantings, crops, plots, asOf, horizonDays = 
     .sort((left, right) => priorityRank(left.priority) - priorityRank(right.priority) || left.dueOn.localeCompare(right.dueOn) || left.title.localeCompare(right.title));
 }
 
+
+export function restWorkTasks({ restPeriods, plots, asOf, horizonDays = 14, lookbackDays = 7, plotId = null }) {
+  const start = addDays(asOf, -lookbackDays);
+  const end = addDays(asOf, horizonDays);
+  const plotById = new Map(plots.map((plot) => [plot.id, plot]));
+  return restPeriods
+    .filter((period) => !plotId || period.plotId === plotId)
+    .filter((period) => period.endedOn >= start && period.endedOn <= end)
+    .map((period) => {
+      const plot = plotById.get(period.plotId);
+      if (!plot) return null;
+      return {
+        id: `bed-release:${period.id}`,
+        type: 'bed-release',
+        sourceId: period.id,
+        plotId: plot.id,
+        plotName: plot.name,
+        title: period.kind === 'cover' ? `End cover crop in ${plot.name}` : `Prepare ${plot.name}`,
+        detail: period.note ?? `Bed rest ends on ${period.endedOn}`,
+        dueOn: period.endedOn,
+        priority: taskPriority(period.endedOn, asOf)
+      };
+    })
+    .filter(Boolean);
+}
+
+export function gardenWorkQueue(options) {
+  const tasks = [
+    ...harvestWorkTasks(options),
+    ...restWorkTasks(options)
+  ];
+  return tasks.sort((left, right) => (
+    priorityRank(left.priority) - priorityRank(right.priority)
+    || left.dueOn.localeCompare(right.dueOn)
+    || left.type.localeCompare(right.type)
+    || left.title.localeCompare(right.title)
+  ));
+}
 export { addDays, priorityRank, taskPriority };
