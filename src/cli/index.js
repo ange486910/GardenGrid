@@ -62,6 +62,7 @@ const help = `GardenGrid CLI
 
   node src/cli/index.js migrate [--database <path>]
   node src/cli/index.js calendar --from YYYY-MM-DD --to YYYY-MM-DD [--database <path>]
+  node src/cli/index.js calendar-export --from YYYY-MM-DD --to YYYY-MM-DD --file <ics> [--plot <id>]
   node src/cli/index.js frost --name <name> --zone <zone> --last-frost YYYY-MM-DD --first-frost YYYY-MM-DD
   node src/cli/index.js window --crop <id> --profile <id> [--database <path>]
   node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
@@ -105,6 +106,13 @@ if (command === 'migrate') {
   const app = createApplication({ databasePath: options.databasePath });
   try {
     console.log(JSON.stringify({ status: 'ok', events: app.service.calendar(options.from, options.to, options.plot) }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'calendar-export') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    const result = app.service.exportCalendarIcs({ from: options.from, to: options.to, plotId: options.plot });
+    writeFileSync(options.file, result.body, 'utf8');
+    console.log(JSON.stringify({ status: 'ok', file: options.file, format: 'ics' }, null, 2));
   } finally { app.close(); }
 } else if (command === 'frost') {
   const app = createApplication({ databasePath: options.databasePath });
