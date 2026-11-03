@@ -215,6 +215,15 @@ export function createApiServer(service, options = {}) {
         const body = await readJson(request);
         return sendJson(response, 200, { data: service.restoreBackup(body.backup ?? body) });
       }
+      if (method === 'GET' && url.pathname === '/api/v1/work-queue') {
+        return sendJson(response, 200, {
+          data: service.workQueue({
+            asOf: url.searchParams.get('asOf'),
+            horizonDays: url.searchParams.get('horizonDays') ?? 14,
+            plotId: url.searchParams.get('plotId') ?? null
+          })
+        });
+      }
       if (method === 'GET' && url.pathname === '/api/v1/calendar.ics') {
         const result = service.exportCalendarIcs({
           from: url.searchParams.get('from'),

@@ -53,6 +53,7 @@ function parse(argv) {
     else if (token === '--dir') options.dir = argv[++index];
     else if (token === '--keep') options.keep = Number(argv[++index]);
     else if (token === '--cadence-hours') options.cadenceHours = Number(argv[++index]);
+    else if (token === '--horizon-days') options.horizonDays = Number(argv[++index]);
     else if (token === '--dry-run') options.dryRun = true;
   }
   return { command, options };
@@ -63,6 +64,7 @@ const help = `GardenGrid CLI
   node src/cli/index.js migrate [--database <path>]
   node src/cli/index.js calendar --from YYYY-MM-DD --to YYYY-MM-DD [--database <path>]
   node src/cli/index.js calendar-export --from YYYY-MM-DD --to YYYY-MM-DD --file <ics> [--plot <id>]
+  node src/cli/index.js work-queue --as-of YYYY-MM-DD [--horizon-days <n>] [--plot <id>]
   node src/cli/index.js frost --name <name> --zone <zone> --last-frost YYYY-MM-DD --first-frost YYYY-MM-DD
   node src/cli/index.js window --crop <id> --profile <id> [--database <path>]
   node src/cli/index.js harvest --planting <id> --date YYYY-MM-DD --quantity <n> --unit <unit>
@@ -333,6 +335,18 @@ if (command === 'migrate') {
       selectedRounds
     });
     console.log(JSON.stringify({ status: 'ok', ...result }, null, 2));
+  } finally { app.close(); }
+} else if (command === 'work-queue') {
+  const app = createApplication({ databasePath: options.databasePath });
+  try {
+    console.log(JSON.stringify({
+      status: 'ok',
+      ...app.service.workQueue({
+        asOf: options.asOf,
+        horizonDays: options.horizonDays ?? 14,
+        plotId: options.plot
+      })
+    }, null, 2));
   } finally { app.close(); }
 } else if (command === 'serve') {
   const app = createApplication({ databasePath: options.databasePath });

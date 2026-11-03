@@ -12,6 +12,7 @@ import { yieldByPlot as projectYieldByPlot } from '../domain/season-analytics.js
 import { buildSeasonExport, seasonPlantingsCsv } from '../domain/season-export.js';
 import { analyzeSeasonImport, validateSeasonImport } from '../domain/season-import.js';
 import { buildGardenBackup, validateGardenBackup } from '../domain/backup.js';
+import { gardenWorkQueue, workQueueSummary } from '../domain/work-queue.js';
 import { ConflictError, NotFoundError, ValidationError, requireDate, requireInteger } from '../domain/validation.js';
 
 export function createGardenService(repository, dependencies = {}) {
@@ -537,6 +538,40 @@ export function createGardenService(repository, dependencies = {}) {
       if (plotId) requirePlot(plotId);
       if (end < start) throw new ConflictError('to must not precede from', { from: start, to: end });
       return calendarEvents({ plantings: repository.listPlantings(), crops: repository.listCrops(), plots: repository.listPlots(), from: start, to: end, plotId });
+    },
+
+    workQueue({ asOf, horizonDays = 14, plotId = null } = {}) {
+      const date = requireDate(asOf, 'asOf');
+      const days = requireInteger(Number(horizonDays), 'horizonDays', { min: 1, max: 365 });
+      if (plotId) requirePlot(plotId);
+      const plantings = repository.listPlantings();
+      const crops = repository.listCrops();
+      const plots = repository.listPlots();
+      const harvests = repository.listHarvests();
+      const plantingById = new Map(plantings.map((planting) => [planting.id, planting]));
+      const yieldByKey = new Map();
+      for (const harvest of harvests) {
+        const planting = plantingById.get(harvest.plantingId);
+        if (!planting) continue;
+        const key = `${planting.plotId}:${planting.cropId}:${harvest.unit}`;
+        const current = yieldByKey.get(key) ?? {
+          plotId: planting.plotId, cropId: planting.cropId, unit: harvest.unit, totalQuantity: 0
+        };
+        current.totalQuantity = Math.round((current.totalQuantity + harvest.quantity) * 100) / 100;
+        yieldByKey.set(key, current);
+      }
+      const tasks = gardenWorkQueue({
+        plantings,
+        crops,
+        plots,
+        restPeriods: repository.listRestPeriods(),
+        harvestTargets: repository.listHarvestTargets(),
+        yieldRows: [...yieldByKey.values()],
+        asOf: date,
+        horizonDays: days,
+        plotId
+      });
+      return { asOf: date, horizonDays: days, ...workQueueSummary(tasks), tasks };
     }
   };
 }
