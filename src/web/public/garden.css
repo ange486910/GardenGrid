@@ -62,3 +62,13 @@ input, select { width: 100%; padding: .65rem .7rem; border: 1px solid #ad9d7d; b
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.work-queue {
+  display: grid;
+  gap: 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.work-queue li[data-priority="overdue"] {
+  color: #8f2418;
+}

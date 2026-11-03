@@ -1,5 +1,7 @@
 # Delivery Plan - GardenGrid
 
+- D21: derived garden work queue for harvest, bed-release and seasonal-target actions.
+
 ## Current position
 
 This document records work completed through Day 19. Milestone boundaries and tags remain

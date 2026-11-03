@@ -8,6 +8,7 @@ export async function mountGardenWorkspace(root, options = {}) {
   const api = options.api ?? createGardenApi();
   const plotList = root.querySelector('[data-role="plot-cards"]');
   const warningList = root.querySelector('[data-role="warnings"]');
+  const workQueueList = root.querySelector('[data-role="work-queue"]');
   const plantForm = root.querySelector('[data-role="plant-form"]');
   const harvestForm = root.querySelector('[data-role="harvest-form"]');
   const targetForm = root.querySelector('[data-role="target-form"]');
@@ -25,11 +26,14 @@ export async function mountGardenWorkspace(root, options = {}) {
       ]);
       const season = Number(today.slice(0, 4));
       const targetData = await api.harvestTargetReport(season);
+      const workData = await api.workQueue(today, 14);
       const yieldSets = await Promise.all(plots.map((plot) => api.yields(plot.id)));
       const yields = { rows: yieldSets.flatMap((result) => result.rows ?? []) };
       const board = buildGardenBoard({ plots, crops, plantings, yields, companions, today });
       root.querySelector('[data-summary="plantings"]').textContent = String(board.totalPlantings);
       root.querySelector('[data-summary="warnings"]').textContent = String(board.totalWarnings);
+      const taskSummary = root.querySelector('[data-summary="tasks"]');
+      if (taskSummary) taskSummary.textContent = String(workData.total);
       if (plotList) {
         plotList.replaceChildren(...board.cards.map((plot) => {
           const article = root.ownerDocument.createElement('article');
@@ -57,6 +61,14 @@ export async function mountGardenWorkspace(root, options = {}) {
           return article;
         }));
         prepareBedCards([...plotList.querySelectorAll('article')]);
+      }
+      if (workQueueList) {
+        workQueueList.replaceChildren(...workData.tasks.map((task) => {
+          const item = root.ownerDocument.createElement('li');
+          item.dataset.priority = task.priority;
+          item.textContent = `${task.title} · ${task.dueOn}`;
+          return item;
+        }));
       }
       if (targetReport) {
         targetReport.replaceChildren(...targetData.rows.map((row) => {

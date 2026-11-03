@@ -137,3 +137,22 @@ can also drift from the repository.
 runs browser tests, CodeQL scans JavaScript, and release tooling checks repository policy and changelog.
 
 **Consequences.** Platform-specific browser failures and policy drift are visible before merge.
+## 9. Derive the work queue from committed garden records
+
+**Problem.** Harvest dates, bed-rest endings and seasonal targets exist in separate views, so a gardener
+has to inspect several screens to decide what needs attention next.
+
+**Alternatives.**
+
+1. Store a second task list that users must maintain manually. It drifts from plantings and rest periods.
+2. Treat every future calendar event as a task. Maintenance work and unmet goals would be missing.
+3. Derive a bounded queue from current records, keep stable task ids and sort by overdue/today/upcoming.
+
+**Decision.** Use option 3. The domain combines due harvests, bed releases and near-term unmet targets.
+The API and CLI expose the same result, and the browser renders it with the open-task count.
+
+**Consequences.** Completing a planting or changing a rest period automatically changes the queue.
+Bed-release tasks remain visible for a seven-day recovery window rather than disappearing immediately.
+
+**Verification.** Domain tests cover urgency, filtering, bed releases and target review. API, CLI and
+browser tests verify the same task appears through each entrypoint.

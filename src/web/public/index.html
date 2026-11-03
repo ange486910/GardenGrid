@@ -24,6 +24,7 @@
       <section class="summary" aria-label="Garden summary">
         <article><span>Plantings</span><strong data-summary="plantings">0</strong></article>
         <article><span>Companion alerts</span><strong data-summary="warnings">0</strong></article>
+        <article><span>Open tasks</span><strong data-summary="tasks">0</strong></article>
         <p data-role="status" role="status" aria-live="polite"></p>
       </section>
 
@@ -34,6 +35,12 @@
         </section>
 
         <aside class="side-panel">
+          <section class="work-panel" aria-labelledby="work-heading">
+            <p class="season">Next actions</p>
+            <h2 id="work-heading">Garden work queue</h2>
+            <ul class="work-queue" data-role="work-queue"></ul>
+          </section>
+
           <section class="plant-panel" aria-labelledby="plant-heading">
             <p class="season">Add a round</p>
             <h2 id="plant-heading">Plant a crop</h2>
