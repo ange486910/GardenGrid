@@ -109,3 +109,12 @@ the same maintenance path.
 
 **Verification.** Application tests assert dry-run writes nothing and completed snapshots have sidecars;
 CLI and job tests cover both dry and write modes.
+## 7. Treat CI and repository policy as executable project code
+
+**Problem.** Local verification alone does not protect `master`; security reporting and review ownership
+can also drift from the repository.
+
+**Decision.** CI runs security checks and the full suite twice on Linux and Windows. A Windows workflow
+runs browser tests, CodeQL scans JavaScript, and release tooling checks repository policy and changelog.
+
+**Consequences.** Platform-specific browser failures and policy drift are visible before merge.

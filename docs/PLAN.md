@@ -2,7 +2,7 @@
 
 ## Current position
 
-This document records work completed through Day 18. Milestone boundaries and tags remain
+This document records work completed through Day 19. Milestone boundaries and tags remain
 intentionally unfrozen until the final contiguous ranges have been selected and reviewed.
 
 - Current baseline candidate: `e198001` (`chore: add day-one compliance audit and hard gates`).
@@ -20,6 +20,7 @@ intentionally unfrozen until the final contiguous ranges have been selected and 
 - D14-D15: fallow periods and checksum-bound season conflict repairs.
 - D16: durable bed order with keyboard, API, CLI and backup support.
 - D17: seasonal bed/crop harvest targets, actual-versus-target variance and browser reporting.
+- D19: cross-platform CI, CodeQL, Windows E2E, credential scanning, ownership policy and release checks.
 - D18: automatic verified garden snapshots with retention, dry-run, CLI and job entrypoint.
 
 ## Acceptance targets

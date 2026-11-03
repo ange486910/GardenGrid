@@ -10,6 +10,7 @@
     "migrate": "node src/cli/index.js migrate",
     "calendar": "node src/cli/index.js calendar",
     "test": "node --test",
-    "verify": "node scripts/verify.mjs",`n    "backup": "node scripts/backup-job.mjs"
+    "verify": "node scripts/verify.mjs",
+    "backup": "node scripts/backup-job.mjs"
   }
 }
