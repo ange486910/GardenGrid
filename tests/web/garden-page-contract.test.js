@@ -10,6 +10,8 @@ test('garden page exposes a semantic bed board and planting form', () => {
   assert.match(html, /<html lang="en">/);
   assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
   assert.match(html, /data-role="plot-cards"/);
+  assert.match(html, /data-role="target-form"/);
+  assert.match(html, /data-role="target-report"/);
   assert.match(html, /data-role="plant-form"/);
   assert.match(html, /<label>Bed<select name="plotId"/);
   assert.match(html, /<label>Crop<select name="cropId"/);

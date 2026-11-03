@@ -16,6 +16,7 @@ calendar. It runs on Node.js 24 with no third-party runtime dependencies and use
 - Checksummed garden backups, transaction-safe restore and harvest correction history.
 - User-defined companion rules, plot-filtered calendars and crop archive state.
 - Explicit fallow and cover-crop periods that reserve bed dates without creating rotation conflicts.
+- Seasonal harvest targets compared with actual bed/crop yields in the same unit.
 
 ## Run
 
@@ -34,6 +35,8 @@ node src/cli/index.js rotation-record --plot <id> --crop <id> --date 2024-05-01 
 node src/cli/index.js rotation-report --as-of 2026-10-30
 node src/cli/index.js rest-add --plot <id> --kind fallow --date 2026-08-01 --ended 2026-08-31
 node src/cli/index.js rest-list --plot <id>
+node src/cli/index.js target-add --plot <id> --crop <id> --season 2026 --quantity 10 --unit kg
+node src/cli/index.js target-report --season 2026
 node src/cli/index.js crop --name Cilantro --family Apiaceae --days 50 --frost-hardy true --earliest-weeks -2 --latest-weeks 2
 node src/cli/index.js crop-status --crop <id> --crop-action archive
 node src/cli/index.js succession --crop <id> --profile <id> --count 3 --interval-days 14
@@ -63,6 +66,8 @@ node src/cli/index.js serve
 - `POST /api/v1/imports/season` with a season snapshot and optional `dryRun`
 - `GET|POST /api/v1/rotation-events`
 - `GET|POST /api/v1/rest-periods`
+- `GET|POST /api/v1/harvest-targets`
+- `GET /api/v1/harvest-targets/report?season=2026`
 - `GET /api/v1/rotation-report?asOf=YYYY-MM-DD`
 - `GET /api/v1/frost-profiles/:id/succession/:cropId?count=4&intervalDays=14`
 - `GET /api/v1/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD`

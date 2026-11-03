@@ -7,7 +7,7 @@ import { launchGardenBrowser } from './cdp.js';
 test('garden reorders beds with its keyboard command', { timeout: 30000 }, async (t) => {
   const app = createApplication({ databasePath: ':memory:' });
   const a = app.service.createPlot({ name: 'Bed A', areaSqm: 4 });
-  app.service.createPlot({ name: 'Bed B', areaSqm: 4 });
+  const b = app.service.createPlot({ name: 'Bed B', areaSqm: 4 });
   const server = await startServer(app.service);
   const base = `http://127.0.0.1:${server.address().port}`;
   let browser;
@@ -25,9 +25,10 @@ test('garden reorders beds with its keyboard command', { timeout: 30000 }, async
       card.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true }));
       return true;
     })()`);
-    await browser.waitFor(`document.querySelector('[data-role="plot-cards"] article:first-child')?.dataset.plotId === '${a.id}'`);
-    assert.equal(app.service.listPlots()[0].id, a.id);
-    assert.equal(app.service.listPlots()[0].displayOrder, 2);
+    await browser.waitFor(`document.querySelector('[data-role="plot-cards"] article:first-child')?.dataset.plotId === '${b.id}'`);
+    assert.equal(app.service.listPlots()[0].id, b.id);
+    assert.equal(app.service.listPlots()[1].id, a.id);
+    assert.equal(app.service.listPlots()[1].displayOrder, 2);
   } finally {
     if (browser) await browser.close();
     await new Promise((resolve) => server.close(() => { app.close(); resolve(); }));

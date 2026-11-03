@@ -57,3 +57,17 @@ test('garden backup preserves the reviewed bed display order', () => {
     assert.deepEqual(target.service.listPlots().map((row) => row.id), [b.id, a.id]);
   } finally { source.close(); target.close(); }
 });
+
+test('garden backup restores seasonal harvest targets', () => {
+  const source = fixture('target_source');
+  const target = fixture('target_target');
+  try {
+    const plot = source.service.createPlot({ name: 'Bed A', areaSqm: 6 });
+    const crop = source.service.createCrop({ name: 'Tomato', family: 'Solanaceae', daysToHarvest: 70, frostHardy: false });
+    source.service.setHarvestTarget({ plotId: plot.id, cropId: crop.id, season: 2026, unit: 'kg', targetQuantity: 12 });
+    const backup = source.service.exportBackup();
+    assert.equal(backup.counts.harvestTargets, 1);
+    target.service.restoreBackup(backup);
+    assert.equal(target.service.listHarvestTargets(2026)[0].targetQuantity, 12);
+  } finally { source.close(); target.close(); }
+});

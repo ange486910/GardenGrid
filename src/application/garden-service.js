@@ -326,7 +326,8 @@ export function createGardenService(repository, dependencies = {}) {
           plantings: repository.listPlantings(),
           harvests: repository.listHarvests(),
           rotationEvents: repository.listRotationEvents(),
-          restPeriods: repository.listRestPeriods()
+          restPeriods: repository.listRestPeriods(),
+          harvestTargets: repository.listHarvestTargets()
         }
       });
     },
@@ -339,7 +340,8 @@ export function createGardenService(repository, dependencies = {}) {
         || repository.listHarvests().length > 0
         || repository.listFrostProfiles().length > 0
         || repository.listRotationEvents().length > 0
-        || repository.listRestPeriods().length > 0;
+        || repository.listRestPeriods().length > 0
+        || repository.listHarvestTargets().length > 0;
       if (occupied) throw new ConflictError('restore requires an empty garden database');
       return run(() => {
         for (const plot of backup.data.plots) repository.createPlot(plot);
@@ -349,6 +351,7 @@ export function createGardenService(repository, dependencies = {}) {
         for (const harvest of backup.data.harvests) repository.createHarvest(harvest);
         for (const event of backup.data.rotationEvents) repository.createRotationEvent(event);
         for (const period of backup.data.restPeriods) repository.createRestPeriod(period);
+        for (const target of backup.data.harvestTargets) repository.createHarvestTarget(target);
         const foreignKeyErrors = repository.db.prepare('PRAGMA foreign_key_check').all();
         if (foreignKeyErrors.length > 0) throw new ConflictError('restored garden violates foreign keys', { foreignKeyErrors });
         const actual = {
@@ -358,7 +361,8 @@ export function createGardenService(repository, dependencies = {}) {
           plantings: repository.listPlantings().length,
           harvests: repository.listHarvests().length,
           rotationEvents: repository.listRotationEvents().length,
-          restPeriods: repository.listRestPeriods().length
+          restPeriods: repository.listRestPeriods().length,
+          harvestTargets: repository.listHarvestTargets().length
         };
         if (JSON.stringify(actual) !== JSON.stringify(backup.counts)) throw new ConflictError('restored row counts do not match', { expected: backup.counts, actual });
         return { restored: backup.counts, checksum: backup.checksum };

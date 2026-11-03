@@ -3,7 +3,7 @@ import { ValidationError } from './validation.js';
 
 export const GARDEN_BACKUP_FORMAT = 'gardengrid-backup';
 export const GARDEN_BACKUP_VERSION = 1;
-const COLLECTIONS = ['plots', 'crops', 'frostProfiles', 'plantings', 'harvests', 'rotationEvents', 'restPeriods'];
+const COLLECTIONS = ['plots', 'crops', 'frostProfiles', 'plantings', 'harvests', 'rotationEvents', 'restPeriods', 'harvestTargets'];
 
 function checksum(data) {
   return createHash('sha256').update(JSON.stringify(data)).digest('hex');
@@ -49,6 +49,7 @@ export function validateGardenBackup(input) {
   ids(input.data.frostProfiles, 'frostProfiles');
   ids(input.data.rotationEvents, 'rotationEvents');
   ids(input.data.restPeriods, 'restPeriods');
+  ids(input.data.harvestTargets, 'harvestTargets');
   for (const planting of input.data.plantings) {
     if (!plotIds.has(planting.plotId) || !cropIds.has(planting.cropId)) throw new ValidationError('planting references an unknown plot or crop', { field: 'plantingId', id: planting.id });
   }
@@ -61,6 +62,11 @@ export function validateGardenBackup(input) {
   for (const period of input.data.restPeriods) {
     if (!plotIds.has(period.plotId)) throw new ValidationError('rest period references an unknown plot', { field: 'plotId', id: period.id });
     if (period.cropId && !cropIds.has(period.cropId)) throw new ValidationError('rest period references an unknown crop', { field: 'cropId', id: period.id });
+  }
+  for (const target of input.data.harvestTargets) {
+    if (!plotIds.has(target.plotId) || !cropIds.has(target.cropId)) {
+      throw new ValidationError('harvest target references an unknown plot or crop', { field: 'harvestTargetId', id: target.id });
+    }
   }
   return input;
 }

@@ -1,69 +1,82 @@
 # Process Notes - GardenGrid
 
-This document records the reasoning behind decisions that are not obvious from the final code.
-It separates the problem, alternatives, chosen design, consequences and verification evidence.
+This document records non-obvious decisions, alternatives, consequences and verification evidence.
 
-## 1. Keep bed occupancy separate from crop rotation history
+## 1. Keep bed rest separate from rotation families
 
-**Problem.** A bed can be intentionally empty or growing a cover crop. Treating those periods as
-ordinary plantings would either block unrelated crops or create false rotation conflicts.
-
-**Alternatives.**
-
-1. Insert fake crop plantings. This pollutes harvest and rotation reports.
-2. Allow overlapping plantings and rely on warnings. This creates impossible schedules.
-3. Store explicit rest periods and check them when either a rest or planting is created.
-
-**Decision.** Use option 3. Rest periods have a plot, date range, kind and optional cover crop.
-They reserve bed dates but do not create rotation family history.
-
-**Consequences.** A rest period and a planting cannot overlap. Rest days appear in the rotation
-report as operational information, not as blocked crop families.
-
-**Verification.** Service tests cover rest/rest and rest/planting conflicts; backup tests restore the
-periods; rotation tests assert the rest-day summary.
-
-## 2. Resolve import conflicts through a checksum-bound review file
-
-**Problem.** A preview that merely lists conflicts leaves the user with no safe way to change the
-source and continue.
+**Problem.** Fallow periods and cover crops reserve bed dates but should not create false crop-family
+conflicts.
 
 **Alternatives.**
 
-1. Automatically shift conflicting dates. This changes an agronomic plan without user approval.
-2. Mutate the imported package in the browser. This separates the applied payload from its checksum.
-3. Keep the package immutable, apply a separate replacement/skip file, and require a preview token
-   before the write.
+1. Insert fake plantings. This pollutes harvest and rotation data.
+2. Allow overlapping commitments. This permits impossible schedules.
+3. Store rest periods explicitly and check both rest/rest and rest/planting overlaps.
 
-**Decision.** Use option 3. The resolution file is bound to the package checksum. Replacements can
-change plot, crop and dates; skips remove selected plantings. The preview token covers the snapshot,
-resolution and current conflicts.
+**Decision.** Use option 3. Rest records reserve bed dates without entering crop-family history.
 
-**Consequences.** Any bed change after preview invalidates the token. Users must rerun the preview.
-A conflict template can generate reviewed skip entries, but applying it still requires a fresh token.
+**Consequences.** A bed cannot be both resting and planted. Rest days can be summarized without being
+reported as rotation blocks.
 
-**Verification.** Tests cover successful replacement, dependency skips, stale preview rejection,
-atomic rollback, API/CLI application and template generation.
+**Verification.** Domain tests cover date overlap; service tests reject conflicts; backup tests restore
+the complete rest history.
 
-## 3. Store explicit bed order instead of rewriting bed names
+## 2. Repair imports with a checksum-bound review file
 
-**Problem.** Relying on alphabetic names prevents users from matching the physical walking order of
-their garden and encourages name prefixes such as "01 - Tomato bed".
+**Problem.** A conflict preview alone gives users no safe way to continue.
 
 **Alternatives.**
 
-1. Sort client-side only. The order disappears after refresh or on another device.
-2. Allow arbitrary duplicate order values. The final order becomes nondeterministic.
-3. Store an integer order per bed and require the complete set of bed ids when reordering.
+1. Auto-shift dates. This changes an agronomic plan without review.
+2. Mutate the signed package. The applied data would no longer match its checksum.
+3. Apply a separate replacement/skip file after a fresh preview token.
 
-**Decision.** Use option 3. Reordering assigns contiguous values from one and rejects missing,
-unknown or duplicate ids. The browser uses Alt+Arrow keys; the CLI and API use the same validation.
+**Decision.** Use option 3. The resolution file is bound to the package checksum and the token also
+covers current conflicts.
 
-**Consequences.** Every successful reorder rewrites all current beds, which is cheap at garden scale.
-New beds initially have order zero and sort by name until the next reorder.
+**Consequences.** Any bed change after preview requires another preview. Templates default to skip
+entries; date or plot changes remain explicit user decisions.
 
-**Verification.** Domain tests reject incomplete orderings, repository tests assert deterministic
-sorting, API and CLI tests assert persisted order, and the browser test checks keyboard movement.
+**Verification.** Tests cover replacement, cascading skips, stale preview rejection, API/CLI apply and
+template generation.
+
+## 3. Store bed order by id, not by name
+
+**Problem.** Alphabetic names cannot match the physical walking order of a garden.
+
+**Alternatives.**
+
+1. Sort only in the browser. The order disappears on refresh.
+2. Permit duplicate order values. The result becomes nondeterministic.
+3. Require the complete set of bed ids when reordering and assign contiguous positions.
+
+**Decision.** Use option 3. Alt+Arrow moves beds in the browser; the API and CLI share validation.
+
+**Consequences.** Reordering rewrites all beds, which is cheap at garden scale. New beds sort by name
+until the next reorder.
+
+**Verification.** Domain tests reject incomplete sets; repository, API, CLI and browser tests assert
+persisted order; backup tests preserve it.
+
+## 4. Targets are keyed by bed, crop, season and unit
+
+**Problem.** A single plot-level total cannot tell whether tomatoes or lettuce met their goals, and
+kilograms cannot be compared with counts.
+
+**Alternatives.**
+
+1. Store one target per bed regardless of crop. This hides crop mix.
+2. Store targets per crop globally. It cannot compare bed performance.
+3. Store one target per bed, crop, season and unit and calculate variance against matching yield rows.
+
+**Decision.** Use option 3. Actual yield is filtered to the season, grouped by the existing yield
+projection, and matched on the same key.
+
+**Consequences.** Different units remain independent. A missing matching harvest reports zero actual
+quantity rather than a made-up conversion.
+
+**Verification.** Domain tests validate keys and variance; service/API tests compare harvest and target;
+CLI and browser checks use the same report; backup tests preserve targets.
 
 ## Evidence commands
 
@@ -75,6 +88,6 @@ node scripts/audit.mjs
 
 ## Known limitations
 
-- Drag-and-drop is intentionally absent; keyboard movement is the primary accessible interaction.
-- Rest periods cannot yet be split when a planting date is manually edited.
-- The season repair template defaults to skip records; replacements remain intentionally explicit.
+- The forecast is a simple target comparison, not a crop-yield prediction.
+- Drag-and-drop is intentionally absent; Alt+Arrow is the primary ordering interaction.
+- Interaction guidance remains engineering data, not horticultural advice.

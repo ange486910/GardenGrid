@@ -10,6 +10,8 @@ export async function mountGardenWorkspace(root, options = {}) {
   const warningList = root.querySelector('[data-role="warnings"]');
   const plantForm = root.querySelector('[data-role="plant-form"]');
   const harvestForm = root.querySelector('[data-role="harvest-form"]');
+  const targetForm = root.querySelector('[data-role="target-form"]');
+  const targetReport = root.querySelector('[data-role="target-report"]');
   const today = options.today ?? new Date().toISOString().slice(0, 10);
   const submitPlant = createGardenSubmissionGuard();
   const submitHarvest = createGardenSubmissionGuard();
@@ -20,6 +22,8 @@ export async function mountGardenWorkspace(root, options = {}) {
       const [plots, crops, plantings, companions] = await Promise.all([
         api.plots(), api.crops(), api.plantings(), api.companions()
       ]);
+      const season = Number(today.slice(0, 4));
+      const targetData = await api.harvestTargetReport(season);
       const yieldSets = await Promise.all(plots.map((plot) => api.yields(plot.id)));
       const yields = { rows: yieldSets.flatMap((result) => result.rows ?? []) };
       const board = buildGardenBoard({ plots, crops, plantings, yields, companions, today });
@@ -52,6 +56,22 @@ export async function mountGardenWorkspace(root, options = {}) {
           return article;
         }));
         prepareBedCards([...plotList.querySelectorAll('article')]);
+      }
+      if (targetReport) {
+        targetReport.replaceChildren(...targetData.rows.map((row) => {
+          const item = root.ownerDocument.createElement('li');
+          const plot = plots.find((entry) => entry.id === row.plotId);
+          const crop = crops.find((entry) => entry.id === row.cropId);
+          item.textContent = `${plot?.name ?? 'Bed'} · ${crop?.name ?? 'Crop'}: ${row.actualQuantity}/${row.targetQuantity} ${row.unit} (${row.completionPercent}%)`;
+          item.dataset.met = row.met ? 'true' : 'false';
+          return item;
+        }));
+      }
+      if (targetForm) {
+        clearAndFill(targetForm.querySelector('[name="plotId"]'), plots, plots[0]?.id, (plot) => plot.name);
+        clearAndFill(targetForm.querySelector('[name="cropId"]'), crops, crops[0]?.id, (crop) => crop.name);
+        const seasonInput = targetForm.querySelector('[name="season"]');
+        if (seasonInput && !seasonInput.value) seasonInput.value = String(season);
       }
       if (warningList) {
         warningList.replaceChildren(...(companions.findings ?? []).map((finding) => {
@@ -120,6 +140,23 @@ export async function mountGardenWorkspace(root, options = {}) {
       }
     });
   });
+  targetForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      await api.setHarvestTarget({
+        plotId: gardenFormValue(targetForm, 'plotId'),
+        cropId: gardenFormValue(targetForm, 'cropId'),
+        season: Number(gardenFormValue(targetForm, 'season')),
+        targetQuantity: gardenQuantity(gardenFormValue(targetForm, 'targetQuantity')),
+        unit: gardenFormValue(targetForm, 'unit')
+      });
+      await refresh();
+      message(root, 'Harvest target saved');
+    } catch (error) {
+      message(root, error.message);
+    }
+  });
+
   root.querySelector('[data-role="refresh"]')?.addEventListener('click', () => refresh().catch(() => {}));
   plotList?.addEventListener('keydown', async (event) => {
     if (!event.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;

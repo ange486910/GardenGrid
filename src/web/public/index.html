@@ -57,6 +57,20 @@
             </form>
           </section>
 
+          <section class="target-panel" aria-labelledby="target-heading">
+            <p class="season">Season goal</p>
+            <h2 id="target-heading">Harvest target</h2>
+            <form data-role="target-form">
+              <label>Bed<select name="plotId" required></select></label>
+              <label>Crop<select name="cropId" required></select></label>
+              <label>Season<input name="season" type="number" min="2000" max="2100" required></label>
+              <label>Target quantity<input name="targetQuantity" type="number" min="0.01" step="0.01" required></label>
+              <label>Unit<select name="unit" required><option value="kg">kg</option><option value="g">g</option><option value="count">count</option><option value="bunch">bunch</option></select></label>
+              <button type="submit">Save target</button>
+            </form>
+            <ul class="target-report" data-role="target-report"></ul>
+          </section>
+
           <section class="warning-panel" aria-labelledby="warning-heading">
             <h2 id="warning-heading">Companion notes</h2>
             <ul data-role="warnings"></ul>
