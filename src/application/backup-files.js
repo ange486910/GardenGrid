@@ -15,6 +15,12 @@ export async function verifyBackupSnapshot(path, validate) {
 export async function pruneBackupSnapshots({ directory, prefix, keep }) {
   const names = await readdir(directory); const files = names.filter((name) => name.startsWith(`${prefix}-`) && name.endsWith('.json')).sort().reverse();
   const removed = [];
-  for (const name of files.slice(keep)) { const path = join(directory, name); const info = await stat(path); await unlink(path); try { await unlink(`${path}.sha256`); } catch {} removed.push({ name, modifiedAt: info.mtime.toISOString() }); }
+  for (const name of files.slice(keep)) {
+    const path = join(directory, name);
+    const info = await stat(path);
+    await unlink(path);
+    try { await unlink(`${path}.sha256`); } catch { /* sidecar may already be gone */ }
+    removed.push({ name, modifiedAt: info.mtime.toISOString() });
+  }
   return removed;
 }

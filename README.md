@@ -47,6 +47,8 @@ node src/cli/index.js season-import --file data/season.json --dry-run --resoluti
 node src/cli/index.js season-import --file data/season.json
 node src/cli/index.js backup --file data/garden-backup.json
 node src/cli/index.js restore --file data/garden-backup.json --database data/restored.sqlite
+node src/cli/index.js backup-auto --dir data/backups --keep 7 --dry-run
+npm run backup -- --dir data/backups --keep 7
 node src/cli/index.js serve
 # open http://127.0.0.1:4312/ for the bed board
 ```

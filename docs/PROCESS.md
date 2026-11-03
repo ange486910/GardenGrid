@@ -91,3 +91,21 @@ node scripts/audit.mjs
 - The forecast is a simple target comparison, not a crop-yield prediction.
 - Drag-and-drop is intentionally absent; Alt+Arrow is the primary ordering interaction.
 - Interaction guidance remains engineering data, not horticultural advice.
+## 5. Verify a new garden snapshot before pruning old ones
+
+**Problem.** Deleting an older backup before the newest file and sidecar are verified can turn a
+partial write into permanent data loss.
+
+**Alternatives.**
+
+1. Write and prune in one unchecked pass.
+2. Keep every snapshot forever.
+3. Write atomically, validate the backup and sidecar, then apply retention.
+
+**Decision.** Use option 3. Dry-run reports scheduling and retention without touching the directory.
+
+**Consequences.** Failed verification leaves every old snapshot intact. CLI and the standalone job use
+the same maintenance path.
+
+**Verification.** Application tests assert dry-run writes nothing and completed snapshots have sidecars;
+CLI and job tests cover both dry and write modes.
