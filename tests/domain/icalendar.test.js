@@ -20,3 +20,10 @@ test('calendar export folds long UTF-8 lines', () => {
   assert.equal(output.includes('\r\n '), true);
   assert.equal(output.includes('\uFFFD'), false);
 });
+test('calendar export preserves an empty calendar and CRLF framing', () => {
+  const output = buildCalendarIcs({ calendarName: 'Empty bed', events: [], generatedAt: '2026-11-03T08:00:00.000Z' });
+  assert.equal(output.includes('BEGIN:VEVENT'), false);
+  assert.equal(output.startsWith('BEGIN:VCALENDAR\r\n'), true);
+  assert.equal(output.endsWith('END:VCALENDAR\r\n'), true);
+  assert.equal(output.replaceAll('\r\n', '').includes('\n'), false);
+});

@@ -78,8 +78,27 @@ quantity rather than a made-up conversion.
 **Verification.** Domain tests validate keys and variance; service/API tests compare harvest and target;
 CLI and browser checks use the same report; backup tests preserve targets.
 
-## Evidence commands
+## 8. Export calendar events as a portable feed
 
+**Problem.** Garden dates were visible only inside the local page and JSON calendar endpoint.
+
+**Alternatives.**
+
+1. Generate a one-off text file in the browser. It cannot be refreshed by a calendar client.
+2. Store a generated feed in the database. It would duplicate derived data and drift after edits.
+3. Derive an iCalendar response from the existing calendar query and give each planting event a stable UID.
+
+**Decision.** Use option 3. The API, CLI and browser all call the same range query. Event UIDs are based on
+type, planting id and date, while generated timestamps stay outside the UID.
+
+**Consequences.** Calendar clients can refresh the feed without duplicate events. Missing ranges and
+reversed dates are rejected by the existing calendar validation.
+
+**Verification.** Domain tests cover escaping, UTF-8 folding, CRLF output and an empty feed; API tests
+cover content type, download name, plot filtering and invalid ranges; CLI and browser tests cover both
+entrypoints.
+
+## Evidence commands
 ```powershell
 node scripts/baseline-check.mjs
 node scripts/verify.mjs

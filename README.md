@@ -23,6 +23,7 @@ calendar. It runs on Node.js 24 with no third-party runtime dependencies and use
 ```powershell
 node src/cli/index.js migrate
 node src/cli/index.js calendar --from 2026-10-01 --to 2026-12-31
+node src/cli/index.js calendar-export --from 2026-01-01 --to 2026-12-31 --file data/garden.ics
 node src/cli/index.js frost --name "Zone 5" --zone 5a --last-frost 2026-05-15 --first-frost 2026-10-01
 node src/cli/index.js harvest --planting <id> --date 2026-10-20 --quantity 2.5 --unit kg
 node src/cli/index.js harvest-update --harvest <id> --date 2026-10-21 --quantity 2.8 --unit kg
